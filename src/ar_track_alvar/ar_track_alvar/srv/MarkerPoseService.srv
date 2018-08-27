@@ -1,0 +1,12 @@
+sensor_msgs/Image image
+sensor_msgs/CameraInfo camera_info
+std_msgs/String bundles_xml_file
+float64 marker_size
+float64 max_new_marker_error
+float64 max_track_error
+---
+int64 points_num
+int64[] x
+int64[] y
+geometry_msgs/Pose camera_to_artag
+

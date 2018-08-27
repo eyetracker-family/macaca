@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="macaca_eyescene_map" type="fit_point.py" name="fit_point" output="screen">
+    <rosparam command="load" file="$(find macaca_eyescene_map)/param/fit_point.yml" />
+  </node>
+</launch>

@@ -1,0 +1,28 @@
+<launch>
+
+
+  <group ns="stereo"> 
+
+    <include file="$(find ar_track_alvar)/launch/pr2_bundle_no_kinect.launch" ns="left">
+      <arg name="cam_image_topic" value="/stereo/left/image_rect_color" />
+      <arg name="cam_info_topic" value="/stereo/left/camera_info" />
+      <arg name="output_frame" value="map" />
+      <arg name="marker_size" value="5.4" />
+      <arg name="bundle_files" value="$(find ar_track_alvar)/bundles/MarkerData_4_5_7_8.xml" />
+    </include>
+
+    <include file="$(find ar_track_alvar)/launch/pr2_bundle_no_kinect.launch" ns="right">
+      <arg name="cam_image_topic" value="/stereo/right/image_rect_color" />
+      <arg name="cam_info_topic" value="/stereo/right/camera_info" />
+      <arg name="output_frame" value="map" />
+      <arg name="marker_size" value="5.4" />
+      <arg name="bundle_files" value="$(find ar_track_alvar)/bundles/MarkerData_0_1_2_3_4_5_6_7_8.xml" />
+    </include>
+
+  </group>
+
+  <node pkg="rviz" type="rviz" name="rviz" output="screen" />
+
+  <node pkg="tf" type="static_transform_publisher" name="map_to_right" args="-0.00 0 0 0 0 0 map right_frame 10"/>
+  <node pkg="tf" type="static_transform_publisher" name="map_to_left" args="0 0 0 0 0 0 map left_frame 10"/>
+</launch>

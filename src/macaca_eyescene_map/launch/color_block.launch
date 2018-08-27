@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="macaca_eyescene_map" type="colorblock" name="colorblock" output="screen">
+    <rosparam command="load" file="$(find macaca_eyescene_map)/param/colorblock.yml" />
+  </node>
+</launch>

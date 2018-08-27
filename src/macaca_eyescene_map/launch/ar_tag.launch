@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="macaca_eyescene_map" type="artag" name="artag" output="screen">
+    <rosparam command="load" file="$(find macaca_eyescene_map)/param/artag.yml" />
+  </node>
+</launch>

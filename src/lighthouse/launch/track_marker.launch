@@ -1,0 +1,18 @@
+<launch>
+  <arg name="usb_device_name" default="/dev/ttyUSB0" />
+  <arg name="object_points_file" default="$(find lighthouse)/../../data/lighthouse/mushroom_points.txt"/>
+  <arg name="world_frame" default="lighthouse_link"/>
+  <arg name="lighthouse_frame" default="lighthouse_link"/>
+  <arg name="marker_frame" default="mushroom_marker_link"/>
+
+  <group ns="lighthouse">
+    <node name="$(arg marker_frame)_track_marker_node" pkg="lighthouse" type="track_marker_node" output="screen">
+      <param name="usb_device_name" value="$(arg usb_device_name)"/>
+      <param name="object_points_file" value="$(arg object_points_file)"/>
+      <param name="lighthouse_frame" value="$(arg lighthouse_frame)"/>
+      <param name="marker_frame" value="$(arg marker_frame)"/>
+      <param name="world_frame" value="$(arg world_frame)"/>
+    </node>
+  </group>
+
+</launch>

@@ -1,0 +1,8 @@
+image_topic : "/scene/left/image_rect_color"
+camera_info_topic : "/scene/left/camera_info"
+bundle_xml_file : "/home/volcanoh/macaca/src/ar_track_alvar/ar_track_alvar/bundles/MarkerData_0-8_5.4.xml"
+output_filename : "/home/volcanoh/macaca/data/eyescene_map/2.yml"
+marker_size : 5.4
+max_new_marker_error : 0.08
+max_track_error : 0.2
+

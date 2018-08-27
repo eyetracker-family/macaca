@@ -1,0 +1,12 @@
+<launch>
+  <arg name="serial" default="27614315"/>
+  <arg name="width" default="1280"/>
+  <arg name="height" default="1024"/>
+  <arg name="framerate" default="30"/>
+  <arg name="cam_name" default="camera"/>
+  <arg name="camera_info_url" default=""/>
+
+  <node pkg="tis" type="single_camera.py" name="$(arg cam_name)" args="$(arg serial) $(arg width) $(arg height) $(arg framerate) $(arg cam_name) $(arg camera_info_url)" output="screen" />
+
+</launch>
+

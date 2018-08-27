@@ -1,0 +1,26 @@
+<launch>
+  <arg name="ns" default="scene"/>
+  <arg name="id0" default="2"/>
+  <arg name="id1" default="3"/>
+
+  <group ns="$(arg ns)">
+    <include file="$(find usbcam)/launch/usbcam_single_node.launch">
+      <arg name="camera_name" default="left"/>
+      <arg name="camera_info_url" default="file://$(find usbcam)/../../../data/camera/scene/stereo/left.yaml"/>
+      <arg name="camera_id" default="$(arg id0)"/>
+    </include>
+
+    <include file="$(find usbcam)/launch/usbcam_single_node.launch">
+      <arg name="camera_name" default="right"/>
+      <arg name="camera_info_url" default="file://$(find usbcam)/../../../data/camera/scene/stereo/right.yaml"/>
+      <arg name="camera_id" default="$(arg id1)"/>
+    </include>
+
+    <!--<node name="stereo_image_proc" pkg="stereo_image_proc" type="stereo_image_proc" output="screen">                                                                               -->
+      <!--<param name="queue_size" value="5"/>-->
+      <!--<param name="approximate_sync" value="True"/>-->
+      <!--<remap from="/stereo/left/image" to="/$(arg ns)/left/image_raw"/>-->
+      <!--<remap from="/stereo/right/image" to="/$(arg ns)/right/image_raw"/>-->
+    <!--</node> -->
+  </group>
+</launch>

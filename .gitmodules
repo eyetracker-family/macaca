@@ -1,0 +1,6 @@
+[submodule "src/handeye_calib_camodocal"]
+	path = src/handeye_calib_camodocal
+	url = git@github.com:volcanoh/handeye_calib_camodocal.git
+[submodule "src/ar_track_alvar"]
+	path = src/ar_track_alvar
+	url = git@github.com:volcanoh/ar_track_alvar.git

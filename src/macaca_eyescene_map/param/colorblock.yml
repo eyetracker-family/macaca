@@ -1,0 +1,6 @@
+image_topic : "/scene/left/image_rect_color"
+output_filename : "/home/macaca/macaca/data/eyescene_map/ColorBlock.yml"
+thresh: 70
+min_area: 700
+max_area: 100000
+

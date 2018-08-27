@@ -1,0 +1,14 @@
+Radius_Min: 10
+Radius_Max: 30
+CannyBlur: 1
+CannyThreshold1: 20
+CannyThreshold2: 40
+StarburstPoints: 90
+PercentageInliers : 30
+InlierIterations: 2
+ImageAwareSupport: True
+EarlyTerminationPercentage: 95
+EarlyRejection: True
+Seed: -1
+
+

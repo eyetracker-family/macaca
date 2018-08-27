@@ -1,0 +1,29 @@
+<launch>
+  <group ns="stereo">
+    <include file="$(find tis)/launch/tiscamera_single_node.launch" ns="left">
+      <arg name="serial" default="27614314"/>
+      <arg name="width" default="1280"/>
+      <arg name="height" default="1024"/>
+      <arg name="framerate" default="30"/>
+      <arg name="cam_name" default="left"/>
+      <arg name="camera_info_url" default="$(find tis)/data/stereo/left.yaml"/>
+    </include>
+
+    <include file="$(find tis)/launch/tiscamera_single_node.launch"  ns="right">
+      <arg name="serial" default="27614315"/>
+      <arg name="width" default="1280"/>
+      <arg name="height" default="1024"/>
+      <arg name="framerate" default="30"/>
+      <arg name="cam_name" default="right"/>
+      <arg name="camera_info_url" default="$(find tis)/data/stereo/right.yaml"/>
+    </include>
+
+    <node name="stereo_image_proc" pkg="stereo_image_proc" type="stereo_image_proc" output="screen">
+      <param name="queue_size" value="5"/>
+      <param name="approximate_sync" value="True"/>
+      <remap from="/stereo/left/image" to="/stereo/left/image_raw"/>
+      <remap from="/stereo/right/image" to="/stereo/right/image_raw"/>
+    </node>
+  </group>
+</launch>
+

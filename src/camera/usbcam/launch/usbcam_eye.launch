@@ -1,0 +1,20 @@
+<launch>
+  <arg name="ns" default="eye"/>
+  <arg name="id0" default="0"/>
+  <arg name="id1" default="1"/>
+
+  <group ns="$(arg ns)">
+    <include file="$(find usbcam)/launch/usbcam_single_node.launch">
+      <arg name="camera_name" default="left"/>
+      <arg name="camera_info_url" default="file://$(find usbcam)/../../../data/camera/eye/left/ost.yaml"/>
+      <arg name="camera_id" default="$(arg id0)"/>
+    </include>
+
+    <include file="$(find usbcam)/launch/usbcam_single_node.launch">
+      <arg name="camera_name" default="right"/>
+      <arg name="camera_info_url" default="file://$(find usbcam)/../../../data/camera/eye/right/ost.yaml"/>
+      <arg name="camera_id" default="$(arg id1)"/>
+    </include>
+  </group>
+
+</launch>

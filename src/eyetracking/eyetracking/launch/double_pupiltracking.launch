@@ -1,0 +1,14 @@
+<launch>
+  <arg name="ns" default="eye"/>
+
+  <group ns="$(arg ns)">
+    <include file="$(find eyetracking)/launch/single_pupiltracking.launch">
+      <arg name="camera_name" default="left"/>
+    </include>
+
+    <include file="$(find eyetracking)/launch/single_pupiltracking.launch">
+      <arg name="camera_name" default="right"/>
+    </include>
+
+  </group>
+</launch>

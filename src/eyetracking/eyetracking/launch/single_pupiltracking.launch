@@ -1,0 +1,6 @@
+<launch>
+  <arg name="camera_name" default="left"/>
+  <node pkg="eyetracking" type="eyetracking_node" name="$(arg camera_name)_eyetracking_node" ns="$(arg camera_name)" output="screen">
+    <rosparam command="load" file="$(find eyetracking)/param/l.yml"/>
+  </node>
+</launch>
