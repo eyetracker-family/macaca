@@ -7,7 +7,9 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
-  std_msgs genmsg##
+  std_msgs##
+  eyetracking_msgs	##to use eyetracking_msgs,add this line
+  message_generation
   image_transport
   cv_bridge
 serial
@@ -20,11 +22,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(OpenCV 3.3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system)
 
+generate_messages()
+
+
 catkin_package(
   #INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp rospy std_msgs dynamic_reconfigure rt pthread serial##
+  CATKIN_DEPENDS roscpp rospy std_msgs dynamic_reconfigure rt pthread serial message_runtime##
   )
-
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations

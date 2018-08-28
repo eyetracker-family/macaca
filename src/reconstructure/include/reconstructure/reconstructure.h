@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Point.h>
+#include <eyetracking_msgs/ImagePoint.h>
 
 #include <image_transport/image_transport.h>
 #include <opencv2/opencv.hpp>
@@ -16,6 +17,7 @@
 //#include <pcl/io/pcd_io.h>  
 
 #include <iostream>
+#include <cmath>
 #include <stack>
 //#include <pcl/io/pcd_io.h>
 //#include <pcl/point_types.h>
@@ -30,7 +32,7 @@ static vector<double> observed_object(3,0.0);//object position to send
 
 bool selectObject;
 Rect selection;
-Point origin;
+Point2d origin,gaze_point;
 Mat xyz;
 
 std::string intrinsic_filename = "/home/macaca/macaca/src/reconstructure/src/intrinsics.yml";
@@ -57,6 +59,13 @@ cv_bridge::CvImagePtr cv_ptr_;
 cv::Mat img1_raw,img2_raw;
 image_transport::Subscriber image_sub_;
 image_transport::Publisher image_pub_;
+
+void ImagePoint_callback(const eyetracking_msgs::ImagePoint::ConstPtr& msg) 
+{ 
+    ROS_INFO_STREAM("gaze_point: " <<msg->x<<","<<msg->y); 
+	gaze_point.x=msg->x;
+	gaze_point.y=msg->y;
+} 
 
 void ImageCallback_left(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -335,5 +344,26 @@ vector<std::pair<cv::Point,long long>> GetMultiColorBlockCenter(const cv::Mat& r
     binary.setTo(0);
   }
   return center_area;
+}
+
+geometry_msgs::Point FindClosestObject(vector<pair<Point2d,Point3d>> center_position_array,Point2d gaze_point)
+{
+	int order=0;
+	double min_distance=200000000;
+	for(int i=0;i<center_position_array.size();i++)
+	{
+		double x=center_position_array[i].first.x,y=center_position_array[i].first.y;
+		double distance=sqrt((x-gaze_point.x)*(x-gaze_point.x)+(y-gaze_point.y)*(y-gaze_point.y));
+		if(distance<min_distance)
+		{
+			min_distance=distance;
+			order=i;
+		}
+	}
+	geometry_msgs::Point point;
+	point.x=center_position_array[order].second.x;
+	point.y=center_position_array[order].second.y;
+	point.z=center_position_array[order].second.z;
+	return point;
 }
 

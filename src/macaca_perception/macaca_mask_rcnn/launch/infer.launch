@@ -4,7 +4,7 @@
   <arg name="wts" default="model_final.pkl"/>
   <arg name="train_wts" default="R-101.pkl"/>
   <arg name="confidence" default="0.9"/>
-  <arg name="sub_img_topic" default="/scene/left/image_rect_color"/>
+  <arg name="sub_img_topic" default="/scene/left/image_color"/>
   <arg name="frame_rate" default="30"/>
   <arg name="gpu_id" default="0"/>
   <arg name="mask_on" default="True"/>

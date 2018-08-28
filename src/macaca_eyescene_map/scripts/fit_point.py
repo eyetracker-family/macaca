@@ -10,6 +10,16 @@ from eyetracking_msgs.msg import RotatedRect
 from eyetracking_msgs.msg import ImagePoint
 import pandas as pd
 
+import cv2  # NOQA (Must import before importing caffe2 due to bug in cv2)
+import glob
+import logging
+import os
+import time
+from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+from eyetracking_msgs.msg import ImagePoint
+
 
 left_eye_point2d_list = []
 right_eye_point2d_list = []
@@ -18,6 +28,8 @@ left_scene_point2d_list = []
 left_eye_point2d_list = []
 right_eye_point2d_list = []
 left_scene_point2d_list = []
+
+lspt = ImagePoint()
 
 calibrated = False
 le_done = False
@@ -89,7 +101,9 @@ def rightCallback(data):
     rey = data.y
     re_done = True
 
-
+def imageCallback(data):
+    global image
+    image=CvBridge().imgmsg_to_cv2(data)
 
 if __name__ == '__main__':
     rospy.init_node('fit_point')
@@ -97,11 +111,15 @@ if __name__ == '__main__':
     left_eye_sub = rospy.Subscriber('/eye/left/pupil_ellipse', RotatedRect, leftCallback, queue_size=1)
     right_eye_sub = rospy.Subscriber('/eye/right/pupil_ellipse', RotatedRect, rightCallback, queue_size=1)
     left_scene_pub = rospy.Publisher('/scene/left/fit_point', ImagePoint, queue_size=1)
+
+    left_image_sub = rospy.Subscriber('/scene/left/image_color', Image, imageCallback, queue_size=1)
+    left_image_pub = rospy.Publisher('/scene/left/image_gaze_point', Image, queue_size=20)
     r = rospy.Rate(30)
     calib_data_file = rospy.get_param('/fit_point/calib_data')
     while not rospy.is_shutdown():
         # read calibration data
         r.sleep()
+        #rospy.spinOnce()
         if not calibrated:
             read_calib_data(calib_data_file)
             left_eye_point2d_array = np.array(left_eye_point2d_list)
@@ -113,10 +131,15 @@ if __name__ == '__main__':
         else:
             if le_done and re_done:
                 lsx, lsy= handle_gaze_estimation()
-                lspt = ImagePoint()
+                #lspt = ImagePoint()
                 lspt.x = lsx
                 lspt.y = lsy
                 left_scene_pub.publish(lspt)
+                cv2.circle(image, (int(lspt.x), int(lspt.y)), 8, (0,0,255), 8)
+                pub_imgmsg = CvBridge().cv2_to_imgmsg(image)
+                left_image_pub.publish(pub_imgmsg)
+                #cv2.imshow("image",image)
+                #cv2.waitKey(0)
                 # print(lspt)
                 print(lsx,lsy)
     print("shutdown")

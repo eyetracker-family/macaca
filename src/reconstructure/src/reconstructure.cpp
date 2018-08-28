@@ -12,6 +12,7 @@ int main(int argc, char **argv)
     image_transport::Subscriber sub_left=it_left.subscribe("scene/left/image_raw",1,ImageCallback_left);
     image_transport::Subscriber sub_right=it_right.subscribe("scene/right/image_raw",1,ImageCallback_right);
 	ros::Publisher pos_pub=nh.advertise<geometry_msgs::Point>("scene/pos",1000);
+	ros::Subscriber sub=nh.subscribe("/scene/left/fit_point",1000,ImagePoint_callback);
 
 
 	FileStorage fs(intrinsic_filename, FileStorage::READ);
@@ -100,7 +101,7 @@ int main(int argc, char **argv)
 
 		//cout<<img1.size()<<endl;
 
-		Mat img1r, img2r;
+		Mat img1r, img2r;//undistorted grey image for reconstructure
 		remap(img1, img1r, map11, map12, INTER_LINEAR);
 		remap(img2, img2r, map21, map22, INTER_LINEAR);
 
@@ -125,7 +126,7 @@ int main(int argc, char **argv)
 		//multi object
 		vector<std::pair<cv::Point,long long>> center_l,center_r;
 
-		Mat img1r_raw, img2r_raw;
+		Mat img1r_raw, img2r_raw;//undistorted color image for connected component analysis.
 		remap(img1_raw, img1r_raw, map11, map12, INTER_LINEAR);
 		remap(img2_raw, img2r_raw, map21, map22, INTER_LINEAR);
 
@@ -228,24 +229,35 @@ int main(int argc, char **argv)
 		}
 		else cout<<"there is no object"<<endl;*/
 		int count2=1;
+		vector<pair<Point2d,Point3d>> center_position_array;
 		for(int i=0;i<minimum;i++)
 		{
 			if(center_l[i].first.x-center_r[i].first.x>0&&center_l[i].first.x-center_r[i].first.x<300&&minimum<5)//multi object
 			{
 				cout<<"The "<<count2<<"th ball is at ["<< xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[0]<<","<<-xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[1]<<","<<xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[2]<<"]"<<endl;
 				count2++;
-				geometry_msgs::Point pos;
-				pos.x=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[0];
-				pos.y=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[1];
-				pos.z=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[2];
-				pos_pub.publish(pos);
+
+				center_position_array.push_back(pair<Point2d,Point3d>(Point2d(center_l[i].first.x,center_l[i].first.y),Point3d(xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[0],-xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[1],xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[2])));
+				
+				//geometry_msgs::Point pos;//positon of observed object.
+				//pos.x=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[0];
+				//pos.y=-xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[1];
+				//pos.z=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[2];
+
 				//observed_object[0]=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[0];
 				//observed_object[1]=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[1];
 				//observed_object[2]=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[2];
 				//cout<<"observed_object[0]: "<<observed_object[0]<<endl;
 			}
 		}
+		if(center_position_array.size()>0)
+		{
+			geometry_msgs::Point pos=FindClosestObject(center_position_array,gaze_point);
+			cout<<"gaze_point: "<<gaze_point.x<<","<<gaze_point.y<<endl;
+			cout<<"colsest pos: "<<pos.x<<","<<pos.y<<","<<pos.z<<endl;
 
+			pos_pub.publish(pos);//publish the positon of observed object.
+		}
 
 		//Mat vdispRGB = disp8;
 		//cvtColor(disp8, vdispRGB, COLOR_GRAY2BGR);

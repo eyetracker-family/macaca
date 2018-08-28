@@ -47,7 +47,7 @@ class Detection:
         self.wts = rospy.get_param('~wts', 'model_final.pkl')
         self.train_wts = rospy.get_param('~train_wts', 'R-101.pkl')
         self.confidence = rospy.get_param('~confidence', 0.9)
-        self.sub_img_topic = rospy.get_param('~sub_img_topic', "image_rect_color")
+        self.sub_img_topic = rospy.get_param('~sub_img_topic', "image_color")#image_rect_color
         self.frame_rate = rospy.get_param('~frame_rate', 30)
 
         self.gpu_id = rospy.get_param('~gpu_id', 0)

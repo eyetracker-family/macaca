@@ -95,6 +95,8 @@ find_package(catkin REQUIRED COMPONENTS
 #   cfg/DynReconf2.cfg
 # )
 
+#generate_messages()
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -107,7 +109,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES macaca_mask_rcnn
-#  CATKIN_DEPENDS macaca_mask_rcnn_msgs message_generation roscpp rospy std_msgs
+#  CATKIN_DEPENDS macaca_mask_rcnn_msgs message_runtime roscpp rospy std_msgs
 #  DEPENDS system_lib
 )
 
