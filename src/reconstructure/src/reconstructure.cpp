@@ -11,6 +11,7 @@ int main(int argc, char **argv)
 
     image_transport::Subscriber sub_left=it_left.subscribe("scene/left/image_raw",1,ImageCallback_left);
     image_transport::Subscriber sub_right=it_right.subscribe("scene/right/image_raw",1,ImageCallback_right);
+
 	ros::Publisher pos_pub=nh.advertise<geometry_msgs::Point>("scene/pos",1000);
 	ros::Subscriber sub=nh.subscribe("/scene/left/fit_point",1000,ImagePoint_callback);
 
@@ -234,7 +235,7 @@ int main(int argc, char **argv)
 		{
 			if(center_l[i].first.x-center_r[i].first.x>0&&center_l[i].first.x-center_r[i].first.x<300&&minimum<5)//multi object
 			{
-				cout<<"The "<<count2<<"th ball is at ["<< xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[0]<<","<<-xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[1]<<","<<xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[2]<<"]"<<endl;
+				cout<<"The "<<count2<<"th object is at ["<< xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[0]<<","<<-xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[1]<<","<<xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[2]<<"]"<<endl;
 				count2++;
 
 				center_position_array.push_back(pair<Point2d,Point3d>(Point2d(center_l[i].first.x,center_l[i].first.y),Point3d(xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[0],-xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[1],xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[2])));
@@ -254,7 +255,7 @@ int main(int argc, char **argv)
 		{
 			geometry_msgs::Point pos=FindClosestObject(center_position_array,gaze_point);
 			cout<<"gaze_point: "<<gaze_point.x<<","<<gaze_point.y<<endl;
-			cout<<"colsest pos: "<<pos.x<<","<<pos.y<<","<<pos.z<<endl;
+			cout<<"pos of observing object: "<<pos.x<<","<<pos.y<<","<<pos.z<<endl;
 
 			pos_pub.publish(pos);//publish the positon of observed object.
 		}

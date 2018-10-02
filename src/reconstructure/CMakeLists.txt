@@ -7,6 +7,7 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
+  tf
   std_msgs##
   eyetracking_msgs	##to use eyetracking_msgs,add this line
   message_generation

@@ -57,18 +57,18 @@ def read_calib_data(filename):
         left_scene_point2d_list.append(left_scene_point2d)
     # print count
 
-length_scale = [3, 3, 3, 3]
+length_scale = [5, 5, 5, 5]#3 originally
 length_scale_bounds = [(1e-05, 100000.0), (1e-05, 100000.0), (1e-05, 100000.0), (1e-05, 100000.0)]
 
 gp_kernel_lsx = RBF(length_scale=length_scale, length_scale_bounds=length_scale_bounds)
 gp_kernel_lsy = RBF(length_scale=length_scale, length_scale_bounds=length_scale_bounds)
-gp_kernel_rsx = RBF(length_scale=length_scale, length_scale_bounds=length_scale_bounds)
-gp_kernel_rsy = RBF(length_scale=length_scale, length_scale_bounds=length_scale_bounds)
+#gp_kernel_rsx = RBF(length_scale=length_scale, length_scale_bounds=length_scale_bounds)
+#gp_kernel_rsy = RBF(length_scale=length_scale, length_scale_bounds=length_scale_bounds)
 
 gpr_lsx = GaussianProcessRegressor(kernel=gp_kernel_lsx)
 gpr_lsy = GaussianProcessRegressor(kernel=gp_kernel_lsy)
-gpr_rsx = GaussianProcessRegressor(kernel=gp_kernel_rsx)
-gpr_rsy = GaussianProcessRegressor(kernel=gp_kernel_rsy)
+#gpr_rsx = GaussianProcessRegressor(kernel=gp_kernel_rsx)
+#gpr_rsy = GaussianProcessRegressor(kernel=gp_kernel_rsy)
 
 def gaze_estimation_model_fitting():
     print("gaze estimation model fitting")
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     left_scene_pub = rospy.Publisher('/scene/left/fit_point', ImagePoint, queue_size=1)
 
     left_image_sub = rospy.Subscriber('/scene/left/image_color', Image, imageCallback, queue_size=1)
-    left_image_pub = rospy.Publisher('/scene/left/image_gaze_point', Image, queue_size=20)
+    left_image_pub = rospy.Publisher('/scene/left/image_gaze_point', Image, queue_size=20)#left image with gaze point
     r = rospy.Rate(30)
     calib_data_file = rospy.get_param('/fit_point/calib_data')
     while not rospy.is_shutdown():

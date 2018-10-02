@@ -65,10 +65,11 @@ int main(int argc, char* argv[]) {
     ros::Time time = ros::Time::now();
     tf::StampedTransform lighthouse_to_world;
     try {
-      tf_listener->waitForTransform(world_frame, lighthouse_frame, time, ros::Duration(1.0));
+      tf_listener->waitForTransform(world_frame, lighthouse_frame, time, ros::Duration(1.0));//ros::Time(0) is better(perfect). ros::Time(0) means to get the latest available tf while ros::Time::now() means to get the tf at the current time,so it needs to wait for the tf broadcaster.
+	//so use waitForTransform+ros::Time::now() or simply ros::Time(0)
       tf_listener->lookupTransform(world_frame, lighthouse_frame, time, lighthouse_to_world);
     }
-    catch(tf::TransformException ex) {
+    catch(tf::TransformException &ex) {
       ROS_ERROR("%s", ex.what());
     }
 
