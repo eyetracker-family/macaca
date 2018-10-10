@@ -51,4 +51,5 @@ target_link_libraries(reconstructure_node
 add_executable(ros_serial_node src/ros_serial.cpp)
 target_link_libraries(ros_serial_node
   ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
   )
