@@ -15,7 +15,6 @@ int main(int argc, char **argv)
 	ros::Publisher pos_pub=nh.advertise<geometry_msgs::Point>("scene/pos",1000);
 	ros::Subscriber sub=nh.subscribe("/scene/left/fit_point",1000,ImagePoint_callback);
 
-
 	FileStorage fs(intrinsic_filename, FileStorage::READ);
 	if (!fs.isOpened())
 	{
@@ -94,51 +93,23 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		cv::Mat img1=img1_raw,img2=img2_raw;
-	    cv:: cvtColor(img1_raw,img1,cv::COLOR_BGR2GRAY);
-	    cv:: cvtColor(img2_raw,img2,cv::COLOR_BGR2GRAY);
+		Mat img1_dst,img2_dst,img1r,img2r;//undistorted grey image for reconstructure
+	    cv:: cvtColor(img1_raw,img1_dst,cv::COLOR_BGR2GRAY);
+	    cv:: cvtColor(img2_raw,img2_dst,cv::COLOR_BGR2GRAY);
 
-	    //cv::imshow("left_grey",img1);
-
-		//cout<<img1.size()<<endl;
-
-		Mat img1r, img2r;//undistorted grey image for reconstructure
-		remap(img1, img1r, map11, map12, INTER_LINEAR);
-		remap(img2, img2r, map21, map22, INTER_LINEAR);
-
-		//imshow("remap_left_grey", img1r);
-		//imshow("remap_right_grey", img2r);
-
-		img1 = img1r;
-		img2 = img2r;
-		
-		/*//one object
-		vector<Vec3f> circles_l;
-		Point center_l,center_r;
-		vector<Vec3f> circles_r;
-
-		Mat img1r_raw, img2r_raw;
-		remap(img1_raw, img1r_raw, map11, map12, INTER_LINEAR);
-		remap(img2_raw, img2r_raw, map21, map22, INTER_LINEAR);
-
-		center_l=GetColorBlockCenter(img1r_raw, binary_left, thresh, min_area, max_area);
-		center_r=GetColorBlockCenter(img2r_raw, binary_right, thresh, min_area, max_area);//one object*/
+		//Mat img1r, img2r;//undistorted grey image for reconstructure
+		remap(img1_dst, img1r, map11, map12, INTER_LINEAR);
+		remap(img2_dst, img2r, map21, map22, INTER_LINEAR);
 
 		//multi object
 		vector<std::pair<cv::Point2d,long long>> center_l,center_r;//centroid and size
 
-		Mat img1r_raw, img2r_raw;//undistorted color image for connected component analysis.
-		remap(img1_raw, img1r_raw, map11, map12, INTER_LINEAR);
-		remap(img2_raw, img2r_raw, map21, map22, INTER_LINEAR);
-
 		int64 t=getTickCount();
 
 		Mat grey0,dst0,labels0,stats0,centroids0,grey1,dst1,labels1,stats1,centroids1;
-		cvtColor(img1r_raw,grey0,cv::COLOR_RGB2GRAY);
-		cvtColor(img2r_raw,grey1,cv::COLOR_RGB2GRAY);
 
-		cv::GaussianBlur(grey0,grey0,Size(5,5),0,0);
-		cv::GaussianBlur(grey1,grey1,Size(5,5),0,0);
+		cv::GaussianBlur(img1r,grey0,Size(5,5),0,0);
+		cv::GaussianBlur(img2r,grey1,Size(5,5),0,0);
 
 		adaptiveThreshold(grey0,dst0,255,cv::ADAPTIVE_THRESH_MEAN_C,cv::THRESH_BINARY,601,-60);
 		adaptiveThreshold(grey1,dst1,255,cv::ADAPTIVE_THRESH_MEAN_C,cv::THRESH_BINARY,601,-60);
@@ -153,8 +124,6 @@ int main(int argc, char **argv)
 			{
 				center_l.push_back(pair<Point,long long>(Point(centroids0.at<double>(i,0),centroids0.at<double>(i,1)),stats0.at<int>(i,4)));
 				//cout<<"connected component coordinate: "<<Point(centroids0.at<double>(i,0),centroids0.at<double>(i,1))<<endl;
-				//center_l.push_back(pair<Point,long long>(Point(stats0.at<int>(i,0)+stats0.at<int>(i,2)/2,stats0.at<int>(i,1)+stats0.at<int>(i,3)/2),stats0.at<int>(i,4)));
-				//cout<<"connected component coordinate: "<<Point(stats0.at<int>(i,0)+stats0.at<int>(i,2)/2,stats0.at<int>(i,1)+stats0.at<int>(i,3)/2)<<endl;
 			}
 		}
 
@@ -163,13 +132,11 @@ int main(int argc, char **argv)
 			if(stats1.at<int>(i,4)>700&&stats1.at<int>(i,4)<70000)
 			{
 				center_r.push_back(pair<Point,long long>(Point(centroids1.at<double>(i,0),centroids1.at<double>(i,1)),stats1.at<int>(i,4)));
-				//center_r.push_back(pair<Point,long long>(Point(stats1.at<int>(i,0)+stats1.at<int>(i,2)/2,stats1.at<int>(i,1)+stats1.at<int>(i,3)/2),stats1.at<int>(i,4)));
 			}
 		}
 
 		//center_l=GetMultiColorBlockCenter(img1r_raw, binary_left, thresh, min_area, max_area);
 		//center_r=GetMultiColorBlockCenter(img2r_raw, binary_right, thresh, min_area, max_area);
-
 
 		t=getTickCount()-t;
 		printf("Time elapsed by GetMultiColorBlockCenter: %fms\n",t*1000/getTickFrequency());
@@ -188,28 +155,6 @@ int main(int argc, char **argv)
 		for(int i=0;i<center_r.size();i++)
 			circle(img2r,center_r[i].first,5,Scalar(0,0,0),3,8,0);//multi object
 
-		//hough circles
-		/*static int frame_count=0;
-		if(frame_count%10==0)
-		{
-			GaussianBlur(img1r,img1r,Size(9,9),2,2);
-			HoughCircles(img1r,circles_l,CV_HOUGH_GRADIENT,1.5,10,200,100,30,80);
-
-			GaussianBlur(img2r,img2r,Size(9,9),2,2);
-			HoughCircles(img2r,circles_r,CV_HOUGH_GRADIENT,1.5,10,200,100,30,80);
-			if(circles_r.size()>0&&circles_l.size()>0)
-			{
-				center_l=Point(circles_l[0][0],circles_l[0][1]);
-				int radius_l=circles_l[0][2];
-				circle(img1r,center_l,radius_l,Scalar(255,0,0),3,8,0);
-				center_r=Point(circles_r[0][0],circles_r[0][1]);
-				int radius_r=circles_r[0][2];
-				circle(img2r,center_r,radius_r,Scalar(255,0,0),3,8,0);
-			}
-			if(frame_count>500) frame_count=0;
-		}
-		frame_count++;*/
-
 		imshow("remap_left_grey", img1r);
 		imshow("remap_right_grey", img2r);
 
@@ -219,30 +164,19 @@ int main(int argc, char **argv)
 		bm->setROI2(roi2);
 		bm->setNumDisparities(numberOfDisparities);
 
-		int cn = img1.channels();
+		int cn = img1r.channels();
 
 		sgbm->setP1(8 * cn*sgbmWinSize*sgbmWinSize);
 		sgbm->setP2(32 * cn*sgbmWinSize*sgbmWinSize);
 
-		copyMakeBorder(img1, img1, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);//left border
-		copyMakeBorder(img2, img2, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
+		copyMakeBorder(img1r, img1r, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);//left border
+		copyMakeBorder(img2r, img2r, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
 
-		//bm->compute(img1, img2, disp);//comment it for real time
-		//sgbm->compute(img1, img2, disp);
+		//bm->compute(img1r, img2r, disp);//comment it for real time
+		//sgbm->compute(img1r, img2r, disp);
 
-		//disp = disp.colRange(numberOfDisparities, img1.cols);
+		//disp = disp.colRange(numberOfDisparities, img1r.cols);
 		//cout<<disp.size()<<endl;
-
-		//if(circles_l.size()>0&&circles_r.size()>0)
-		//{
-		//}
-
-		/*if(center_l.x-center_r.x>0&&center_l.x-center_r.x<300)//one object
-		{
-			disp.at<short>(center_l.y,center_l.x)=16*(center_l.x-center_r.x);//be careful of the order of x,y!!!
-			cout<<"current pos in left image coordinate:"<<center_l<<endl;
-			cout<<"current diaparity of ball center:"<<center_l.x-center_r.x<<endl;
-		}*/
 
 		size_t minimum=min(center_l.size(),center_r.size());//multi object
 		int count1=1;
@@ -263,16 +197,7 @@ int main(int argc, char **argv)
 
 		reprojectImageTo3D(disp, xyz, Q, true);
 		xyz = xyz * 16;
-		//if(circles_l.size()>0&&circles_r.size()>0)
-		//{
-			//cout<<"The ball is at "<<xyz.at<Vec3f>(center_l.x,center_l.y)<<endl;
-		//}
 
-		/*if(center_l.x-center_r.x>0&&center_l.x-center_r.x<300)
-		{
-			cout<<"The ball is at ["<< xyz.at<Vec3f>(center_l.y,center_l.x)[0]<<","<<-xyz.at<Vec3f>(center_l.y,center_l.x)[1]<<","<<xyz.at<Vec3f>(center_l.y,center_l.x)[2]<<"]"<<endl;
-		}
-		else cout<<"there is no object"<<endl;*/
 		int count2=1;
 		vector<pair<Point2d,Point3d>> center_position_array;
 		for(int i=0;i<minimum;i++)
@@ -283,16 +208,6 @@ int main(int argc, char **argv)
 				count2++;
 
 				center_position_array.push_back(pair<Point2d,Point3d>(Point2d(center_l[i].first.x,center_l[i].first.y),Point3d(xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[0],-xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[1],xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[2])));
-				
-				//geometry_msgs::Point pos;//positon of observed object.
-				//pos.x=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[0];
-				//pos.y=-xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[1];
-				//pos.z=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[2];
-
-				//observed_object[0]=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[0];
-				//observed_object[1]=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[1];
-				//observed_object[2]=xyz.at<Vec3f>(center_l[0].first.y,center_l[0].first.x)[2];
-				//cout<<"observed_object[0]: "<<observed_object[0]<<endl;
 			}
 		}
 		if(center_position_array.size()>0)
