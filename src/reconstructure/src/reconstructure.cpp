@@ -125,20 +125,64 @@ int main(int argc, char **argv)
 		center_r=GetColorBlockCenter(img2r_raw, binary_right, thresh, min_area, max_area);//one object*/
 
 		//multi object
-		vector<std::pair<cv::Point,long long>> center_l,center_r;
+		vector<std::pair<cv::Point2d,long long>> center_l,center_r;//centroid and size
 
 		Mat img1r_raw, img2r_raw;//undistorted color image for connected component analysis.
 		remap(img1_raw, img1r_raw, map11, map12, INTER_LINEAR);
 		remap(img2_raw, img2r_raw, map21, map22, INTER_LINEAR);
 
-		center_l=GetMultiColorBlockCenter(img1r_raw, binary_left, thresh, min_area, max_area);
-		center_r=GetMultiColorBlockCenter(img2r_raw, binary_right, thresh, min_area, max_area);
+		int64 t=getTickCount();
+
+		Mat grey0,dst0,labels0,stats0,centroids0,grey1,dst1,labels1,stats1,centroids1;
+		cvtColor(img1r_raw,grey0,cv::COLOR_RGB2GRAY);
+		cvtColor(img2r_raw,grey1,cv::COLOR_RGB2GRAY);
+
+		cv::GaussianBlur(grey0,grey0,Size(5,5),0,0);
+		cv::GaussianBlur(grey1,grey1,Size(5,5),0,0);
+
+		adaptiveThreshold(grey0,dst0,255,cv::ADAPTIVE_THRESH_MEAN_C,cv::THRESH_BINARY,601,-60);
+		adaptiveThreshold(grey1,dst1,255,cv::ADAPTIVE_THRESH_MEAN_C,cv::THRESH_BINARY,601,-60);
+
+		int nccomps0,nccomps1;
+		nccomps0=cv::connectedComponentsWithStats(dst0,labels0,stats0,centroids0);
+		nccomps1=cv::connectedComponentsWithStats(dst1,labels1,stats1,centroids1);
+
+		for(int i=1;i<stats0.rows;i++)//begin from 1 because the first one is background
+		{
+			if(stats0.at<int>(i,4)>700&&stats0.at<int>(i,4)<70000)
+			{
+				center_l.push_back(pair<Point,long long>(Point(centroids0.at<double>(i,0),centroids0.at<double>(i,1)),stats0.at<int>(i,4)));
+				//cout<<"connected component coordinate: "<<Point(centroids0.at<double>(i,0),centroids0.at<double>(i,1))<<endl;
+				//center_l.push_back(pair<Point,long long>(Point(stats0.at<int>(i,0)+stats0.at<int>(i,2)/2,stats0.at<int>(i,1)+stats0.at<int>(i,3)/2),stats0.at<int>(i,4)));
+				//cout<<"connected component coordinate: "<<Point(stats0.at<int>(i,0)+stats0.at<int>(i,2)/2,stats0.at<int>(i,1)+stats0.at<int>(i,3)/2)<<endl;
+			}
+		}
+
+		for(int i=1;i<stats1.rows;i++)//begin from 1 because the first one is background
+		{
+			if(stats1.at<int>(i,4)>700&&stats1.at<int>(i,4)<70000)
+			{
+				center_r.push_back(pair<Point,long long>(Point(centroids1.at<double>(i,0),centroids1.at<double>(i,1)),stats1.at<int>(i,4)));
+				//center_r.push_back(pair<Point,long long>(Point(stats1.at<int>(i,0)+stats1.at<int>(i,2)/2,stats1.at<int>(i,1)+stats1.at<int>(i,3)/2),stats1.at<int>(i,4)));
+			}
+		}
+
+		//center_l=GetMultiColorBlockCenter(img1r_raw, binary_left, thresh, min_area, max_area);
+		//center_r=GetMultiColorBlockCenter(img2r_raw, binary_right, thresh, min_area, max_area);
+
+
+		t=getTickCount()-t;
+		printf("Time elapsed by GetMultiColorBlockCenter: %fms\n",t*1000/getTickFrequency());
 		
 		std::sort(center_l.begin(),center_l.end(),[](const std::pair<cv::Point,long long>&a,const std::pair<cv::Point,long long>&b){return a.second>b.second;});
 		std::sort(center_r.begin(),center_r.end(),[](const std::pair<cv::Point,long long>&a,const std::pair<cv::Point,long long>&b){return a.second>b.second;});
 
-		imshow("left_binary", binary_left);
-		imshow("right_binary", binary_right);
+		//imshow("left_binary", binary_left);
+		//imshow("right_binary", binary_right);
+
+		imshow("left_binary", dst0);
+		imshow("right_binary", dst1);
+
 		for(int i=0;i<center_l.size();i++)
 			circle(img1r,center_l[i].first,5,Scalar(0,0,0),3,8,0);
 		for(int i=0;i<center_r.size();i++)
@@ -180,7 +224,7 @@ int main(int argc, char **argv)
 		sgbm->setP1(8 * cn*sgbmWinSize*sgbmWinSize);
 		sgbm->setP2(32 * cn*sgbmWinSize*sgbmWinSize);
 
-		copyMakeBorder(img1, img1, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
+		copyMakeBorder(img1, img1, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);//left border
 		copyMakeBorder(img2, img2, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
 
 		//bm->compute(img1, img2, disp);//comment it for real time

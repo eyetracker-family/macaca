@@ -55,25 +55,25 @@ void transformPoint(const tf::TransformListener &listener)
 	char data[16];
 	data[0]=0X55;data[1]=0X01;data[2]=0X01;data[3]=0X0C;//header
 
-	short int a=(short int)(lighthouse_pos.point.x*10);
-	char* temp1=(char *)&a;
-	data[4]=temp1[1];data[5]=temp1[0];//x
-
-	short int b=(short int)(lighthouse_pos.point.y*10);
-	char* temp2=(char *)&a;
-	data[6]=temp2[1];data[7]=temp2[0];//y
-
-	short int c=(short int)(lighthouse_pos.point.z*10);
-	char* temp3=(char *)&a;
-	data[8]=temp3[1];data[9]=temp3[0];//z
-
 	/*data[4]=(short int)(msg->x*10)>>8;data[5]=(short int)(msg->x*10)&0xff;//x
 	data[6]=(short int)(msg->y*10)>>8;data[7]=(short int)(msg->y*10)&0xff;//y
 	data[8]=(short int)(msg->z*10)>>8;data[9]=(short int)(msg->z*10)&0xff;//z*/
 
-	data[10]=0x01;data[11]=0x01;//roll
-	data[12]=0x01;data[13]=0x01;//pitch
-	data[14]=0x01;data[15]=0x01;//yaw
+	data[4]=0x01;data[5]=0x01;//roll
+	data[6]=0x01;data[7]=0x01;//pitch
+	data[8]=0x01;data[9]=0x01;//yaw
+
+	short int a=(short int)(lighthouse_pos.point.x*10);
+	char* temp1=(char *)&a;
+	data[10]=temp1[1];data[11]=temp1[0];//x
+
+	short int b=(short int)(lighthouse_pos.point.y*10);
+	char* temp2=(char *)&a;
+	data[12]=temp2[1];data[13]=temp2[0];//y
+
+	short int c=(short int)(lighthouse_pos.point.z*10);
+	char* temp3=(char *)&a;
+	data[14]=temp3[1];data[15]=temp3[0];//z
 
 	short int pi=1234;
 	char* temp=(char *)&pi;

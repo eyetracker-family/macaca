@@ -34,6 +34,7 @@ lspt = ImagePoint()
 calibrated = False
 le_done = False
 re_done = False
+ls_done = False
 lex,ley, rex, rey = 0.0, 0.0, 0.0, 0.0
 
 def read_calib_data(filename):
@@ -102,8 +103,9 @@ def rightCallback(data):
     re_done = True
 
 def imageCallback(data):
-    global image
+    global image,ls_done
     image=CvBridge().imgmsg_to_cv2(data)
+    ls_done=True
 
 if __name__ == '__main__':
     rospy.init_node('fit_point')
@@ -129,7 +131,7 @@ if __name__ == '__main__':
             calibrated = True
             # get fitting model with data
         else:
-            if le_done and re_done:
+            if le_done and re_done and ls_done:
                 lsx, lsy= handle_gaze_estimation()
                 #lspt = ImagePoint()
                 lspt.x = lsx

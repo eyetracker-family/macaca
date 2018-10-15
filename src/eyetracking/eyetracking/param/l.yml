@@ -1,5 +1,5 @@
 Radius_Min: 10
-Radius_Max: 30
+Radius_Max: 80
 CannyBlur: 1
 CannyThreshold1: 20
 CannyThreshold2: 40

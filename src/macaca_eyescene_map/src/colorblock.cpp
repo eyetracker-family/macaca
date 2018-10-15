@@ -303,6 +303,19 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg) {
     left_scene_point2d.y = center.y;
     leftsceneDone = true;
   }
+
+  /*for(int i=256;i<1280;i+=256)
+	for(int j=144;j<720;j+=144)
+		circle(cv_image,Point(i,j),5,Scalar(0,255,0),3,8,0);*/
+  int border=80,rows=4,cols=6;
+  for(int i=border;i<=1280-border;i+=(1280-2*border)/(cols-1))
+	for(int j=border;j<=720-border;j+=(720-2*border)/(rows-1))
+		circle(cv_image,Point(i,j),5,Scalar(0,255,0),3,8,0);
+
+  cv::circle(cv_image,center,5,Scalar(255,0,0),3,8,0);
+  imshow("gaussian process regression calibrate",cv_image);
+  cv::waitKey(10);
+
   sensor_msgs::Image binmsg;
   cv_bridge::CvImage cv_bri_img(msg->header, sensor_msgs::image_encodings::MONO8, binary);
   image_pub.publish(cv_bri_img.toImageMsg());
