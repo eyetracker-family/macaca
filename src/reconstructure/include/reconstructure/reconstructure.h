@@ -32,7 +32,7 @@ static vector<double> observed_object(3,0.0);//object position to send
 
 bool selectObject;
 Rect selection;
-Point2d origin,gaze_point;
+Point2d origin,gaze_point_array[30];
 Mat xyz;
 
 std::string intrinsic_filename = "/home/macaca/macaca/src/reconstructure/src/intrinsics.yml";
@@ -63,8 +63,12 @@ image_transport::Publisher image_pub_;
 void ImagePoint_callback(const eyetracking_msgs::ImagePoint::ConstPtr& msg) 
 { 
     ROS_INFO_STREAM("gaze_point: " <<msg->x<<","<<msg->y); 
-	gaze_point.x=msg->x;
-	gaze_point.y=msg->y;
+	gaze_point_array[29].x=msg->x;
+	gaze_point_array[29].y=msg->y;
+	for(int i=0;i<29;i++)
+	{
+		gaze_point_array[i]=gaze_point_array[i+1];
+	}
 } 
 
 void ImageCallback_left(const sensor_msgs::ImageConstPtr& msg)
@@ -365,5 +369,35 @@ geometry_msgs::Point FindClosestObject(vector<pair<Point2d,Point3d>> center_posi
 	point.y=center_position_array[order].second.y;
 	point.z=center_position_array[order].second.z;
 	return point;
+}
+geometry_msgs::Point Find_Target_Object(vector<pair<int,Point3d>> label_position_array,Point2d (&gaze_point_array)[30],Mat label,int nccomps)
+{
+	geometry_msgs::Point pos_target;
+	pos_target.x=pos_target.y=pos_target.z=0;
+	vector<int> count(nccomps,0);
+	for(int i=0;i<30;i++)
+	{
+		if(gaze_point_array[i].x>1&&gaze_point_array[i].y>1)
+		{
+			int index=label.at<int>(gaze_point_array[i].y,gaze_point_array[i].x);
+			count[index]++;
+		}
+	}
+	for(int i=1;i<count.size();i++)//0 is the background
+	{
+		if(count[i]>15)//condition
+		{
+			for(int j=0;j<label_position_array.size();j++)
+			{
+				if(label_position_array[j].first==i)
+				{
+					pos_target.x=label_position_array[j].second.x;
+					pos_target.y=label_position_array[j].second.y;
+					pos_target.z=label_position_array[j].second.z;
+				}
+			}
+		}
+	}
+	return pos_target;
 }
 

@@ -97,13 +97,12 @@ int main(int argc, char **argv)
 	    cv:: cvtColor(img1_raw,img1_dst,cv::COLOR_BGR2GRAY);
 	    cv:: cvtColor(img2_raw,img2_dst,cv::COLOR_BGR2GRAY);
 
+		//Mat img1r, img2r;//undistorted grey image for reconstructure
 		remap(img1_dst, img1r, map11, map12, INTER_LINEAR);
 		remap(img2_dst, img2r, map21, map22, INTER_LINEAR);
-		//cout<<"map11: "<<map11<<endl;
-		//cout<<"map12: "<<map11<<endl;
 
 		//multi object
-		vector<std::pair<int,long long>> center_l,center_r;//label and size
+		vector<std::pair<cv::Point2d,long long>> center_l,center_r;//centroid and size
 
 		int64 t=getTickCount();
 
@@ -119,11 +118,11 @@ int main(int argc, char **argv)
 		nccomps0=cv::connectedComponentsWithStats(dst0,labels0,stats0,centroids0);
 		nccomps1=cv::connectedComponentsWithStats(dst1,labels1,stats1,centroids1);
 
-		for(int i=1;i<stats0.rows;i++)//begin from 1 because the 0 is background
+		for(int i=1;i<stats0.rows;i++)//begin from 1 because the first one is background
 		{
 			if(stats0.at<int>(i,4)>700&&stats0.at<int>(i,4)<70000)
 			{
-				center_l.push_back(pair<int,long long>(i,stats0.at<int>(i,4)));
+				center_l.push_back(pair<Point,long long>(Point(centroids0.at<double>(i,0),centroids0.at<double>(i,1)),stats0.at<int>(i,4)));
 				//cout<<"connected component coordinate: "<<Point(centroids0.at<double>(i,0),centroids0.at<double>(i,1))<<endl;
 			}
 		}
@@ -132,7 +131,7 @@ int main(int argc, char **argv)
 		{
 			if(stats1.at<int>(i,4)>700&&stats1.at<int>(i,4)<70000)
 			{
-				center_r.push_back(pair<int,long long>(i,stats1.at<int>(i,4)));
+				center_r.push_back(pair<Point,long long>(Point(centroids1.at<double>(i,0),centroids1.at<double>(i,1)),stats1.at<int>(i,4)));
 			}
 		}
 
@@ -142,8 +141,8 @@ int main(int argc, char **argv)
 		t=getTickCount()-t;
 		printf("Time elapsed by GetMultiColorBlockCenter: %fms\n",t*1000/getTickFrequency());
 		
-		std::sort(center_l.begin(),center_l.end(),[](const std::pair<int,long long>&a,const std::pair<int,long long>&b){return a.second>b.second;});//sort from bigger to smaller
-		std::sort(center_r.begin(),center_r.end(),[](const std::pair<int,long long>&a,const std::pair<int,long long>&b){return a.second>b.second;});
+		std::sort(center_l.begin(),center_l.end(),[](const std::pair<cv::Point,long long>&a,const std::pair<cv::Point,long long>&b){return a.second>b.second;});
+		std::sort(center_r.begin(),center_r.end(),[](const std::pair<cv::Point,long long>&a,const std::pair<cv::Point,long long>&b){return a.second>b.second;});
 
 		//imshow("left_binary", binary_left);
 		//imshow("right_binary", binary_right);
@@ -151,22 +150,10 @@ int main(int argc, char **argv)
 		imshow("left_binary", dst0);
 		imshow("right_binary", dst1);
 
-		for(int i=0;i<center_l.size();i++)//draw the centers
-		{
-			circle(img1r,Point(centroids0.at<double>(center_l[i].first,0),centroids0.at<double>(center_l[i].first,1)),5,Scalar(0,0,0),3,8,0);///!!!
-			stringstream ss;
-			ss<<i+1;
-			string str=ss.str();
-			putText(img1r,str,Point(centroids0.at<double>(center_l[i].first,0)+20,centroids0.at<double>(center_l[i].first,1)+20),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,0));
-		}
+		for(int i=0;i<center_l.size();i++)
+			circle(img1r,center_l[i].first,5,Scalar(0,0,0),3,8,0);
 		for(int i=0;i<center_r.size();i++)
-		{
-			circle(img2r,Point(centroids1.at<double>(center_r[i].first,0),centroids1.at<double>(center_r[i].first,1)),5,Scalar(0,0,0),3,8,0);//multi object///!!!
-			stringstream ss;
-			ss<<i+1;
-			string str=ss.str();
-			putText(img2r,str,Point(centroids1.at<double>(center_r[i].first,0)+20,centroids1.at<double>(center_r[i].first,1)+20),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,0));
-		}
+			circle(img2r,center_r[i].first,5,Scalar(0,0,0),3,8,0);//multi object
 
 		imshow("remap_left_grey", img1r);
 		imshow("remap_right_grey", img2r);
@@ -195,12 +182,12 @@ int main(int argc, char **argv)
 		int count1=1;
 		for(int i=0;i<minimum;i++)
 		{
-			if(centroids0.at<double>(center_l[i].first,0)-centroids1.at<double>(center_r[i].first,0)>0&&centroids0.at<double>(center_l[i].first,0)-centroids1.at<double>(center_r[i].first,0)<300&&minimum<5)
+			if(center_l[i].first.x-center_r[i].first.x>0&&center_l[i].first.x-center_r[i].first.x<300&&minimum<5)
 //&&(center_l[i].second/center_r[i].second>0.6)&&(center_l[i].second/center_r[i].second<1.5)
 			{
-				disp.at<short>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))=(short)(16*(centroids0.at<double>(center_l[i].first,0)-centroids1.at<double>(center_r[i].first,0)));//be careful of the order of x,y!!!///!!!
-				cout<<"current pos of "<<count1<<" object in left image coordinate:"<<Point(centroids0.at<double>(center_l[i].first,0),centroids0.at<double>(center_l[i].first,1))<<endl;
-				cout<<"current diaparity of "<<count1<<" ball center:"<<centroids0.at<double>(center_l[i].first,0)-centroids1.at<double>(center_r[i].first,0)<<endl;
+				disp.at<short>(center_l[i].first.y,center_l[i].first.x)=16*(center_l[i].first.x-center_r[i].first.x);//be careful of the order of x,y!!!
+				cout<<"current pos of "<<count1<<" object in left image coordinate:"<<center_l[i].first<<endl;
+				cout<<"current diaparity of "<<count1<<" ball center:"<<center_l[i].first.x-center_r[i].first.x<<endl;
 				count1++;
 			}
 		}
@@ -211,17 +198,16 @@ int main(int argc, char **argv)
 		reprojectImageTo3D(disp, xyz, Q, true);
 		xyz = xyz * 16;
 
-		//decide the observing object by the cloest center
-		/*int count2=1;
+		int count2=1;
 		vector<pair<Point2d,Point3d>> center_position_array;
 		for(int i=0;i<minimum;i++)
 		{
-			if(centroids0.at<double>(center_l[i].first,0)-centroids1.at<double>(center_r[i].first,0)>0&&centroids0.at<double>(center_l[i].first,0)-centroids1.at<double>(center_r[i].first,0)<300&&minimum<5)//multi object
+			if(center_l[i].first.x-center_r[i].first.x>0&&center_l[i].first.x-center_r[i].first.x<300&&minimum<5)//multi object
 			{
-				cout<<"The "<<count2<<"th object is at ["<< xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[0]<<","<<-xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[1]<<","<<xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[2]<<"]"<<endl;
+				cout<<"The "<<count2<<"th object is at ["<< xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[0]<<","<<-xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[1]<<","<<xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[2]<<"]"<<endl;
 				count2++;
 
-				center_position_array.push_back(pair<Point2d,Point3d>(Point2d(centroids0.at<double>(center_l[i].first,0),centroids0.at<double>(center_l[i].first,1)),Point3d(xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[0],-xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[1],xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[2])));
+				center_position_array.push_back(pair<Point2d,Point3d>(Point2d(center_l[i].first.x,center_l[i].first.y),Point3d(xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[0],-xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[1],xyz.at<Vec3f>(center_l[i].first.y,center_l[i].first.x)[2])));
 			}
 		}
 		if(center_position_array.size()>0)
@@ -231,33 +217,7 @@ int main(int argc, char **argv)
 			cout<<"pos of observing object: "<<pos.x<<","<<pos.y<<","<<pos.z<<endl;
 
 			pos_pub.publish(pos);//publish the positon of observed object.
-		}*/
-
-		//decide the observing object by the connected component
-		int count2=1;
-		vector<pair<int,Point3d>> label_position_array;
-		for(int i=0;i<minimum;i++)
-		{
-			if(centroids0.at<double>(center_l[i].first,0)-centroids1.at<double>(center_r[i].first,0)>0&&centroids0.at<double>(center_l[i].first,0)-centroids1.at<double>(center_r[i].first,0)<300&&minimum<5)//multi object
-			{
-				cout<<"The "<<count2<<"th object is at ["<< xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[0]<<","<<-xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[1]<<","<<xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[2]<<"]"<<endl;
-				count2++;
-
-				label_position_array.push_back(pair<int,Point3d>(center_l[i].first,Point3d(xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[0],-xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[1],xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[2])));
-			}
 		}
-		geometry_msgs::Point pos;
-		if(label_position_array.size()>0)
-		{
-			pos=Find_Target_Object(label_position_array,gaze_point_array,labels0,nccomps0);
-		}
-		else
-			pos.x=pos.y=pos.z=0;
-
-		cout<<"gaze_point: "<<gaze_point_array[29].x<<","<<gaze_point_array[29].y<<endl;
-		cout<<"pos of observing object: "<<pos.x<<","<<pos.y<<","<<pos.z<<endl;
-
-		pos_pub.publish(pos);//publish the positon of observed object.
 
 		//Mat vdispRGB = disp8;
 		//cvtColor(disp8, vdispRGB, COLOR_GRAY2BGR);

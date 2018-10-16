@@ -15,9 +15,15 @@
 #include <iostream>
 #include <stack>
 #include <algorithm>
+
+#include "opencv2/calib3d/calib3d.hpp"
+
 using namespace std;
 using namespace cv;
 
+std::string intrinsic_filename = "/home/macaca/macaca/src/reconstructure/src/intrinsics.yml";
+std::string extrinsic_filename = "/home/macaca/macaca/src/reconstructure/src/extrinsics.yml";
+Mat map11, map12;
 
 bool leftsceneDone = false;
 bool lefteyeDone = false;
@@ -293,10 +299,48 @@ void rightpupilCallback(const eyetracking_msgs::RotatedRectConstPtr& msg) {
 
 }
 
+void remap_init(Mat &map11, Mat &map12)
+{
+	FileStorage fs(intrinsic_filename, FileStorage::READ);
+	if (!fs.isOpened())
+	{
+		printf("Failed to open file %s\n", intrinsic_filename.c_str());
+	}
+
+	Mat M1, D1, M2, D2;
+	fs["M1"] >> M1;
+	fs["D1"] >> D1;
+	fs["M2"] >> M2;
+	fs["D2"] >> D2;
+
+	M1 *= 1;
+	M2 *= 1;
+
+	fs.open(extrinsic_filename, FileStorage::READ);
+	if (!fs.isOpened())
+	{
+		printf("Failed to open file %s\n", extrinsic_filename.c_str());
+	}
+
+	Mat R, T, R1, P1, R2, P2,Q;
+	fs["R"] >> R;
+	fs["T"] >> T;
+
+	Size img_size(1280,720);
+	Rect roi1, roi2;
+
+	stereoRectify(M1, D1, M2, D2, img_size, R, T, R1, R2, P1, P2, Q, CALIB_ZERO_DISPARITY, -1, img_size, &roi1, &roi2);
+
+	initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);
+}
+
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg) {
-  cv::Mat cv_image = cv_bridge::toCvCopy(msg, "rgb8")->image;
-//cout<<"cv_image size: "<<cv_image.size()<<endl;
+	cv::Mat cv_image = cv_bridge::toCvCopy(msg, "rgb8")->image;
+
+	remap_init(map11,map12);
+	remap(cv_image, cv_image, map11, map12, INTER_LINEAR);
+
   cv::Point center = GetColorBlockCenter(cv_image, binary, thresh, min_area, max_area);
   if (center.x != 0 || center.y !=0) {
     left_scene_point2d.x = center.x;
@@ -307,7 +351,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg) {
   /*for(int i=256;i<1280;i+=256)
 	for(int j=144;j<720;j+=144)
 		circle(cv_image,Point(i,j),5,Scalar(0,255,0),3,8,0);*/
-  int border=80,rows=4,cols=6;
+  int border=150,rows=3,cols=4;
   for(int i=border;i<=1280-border;i+=(1280-2*border)/(cols-1))
 	for(int j=border;j<=720-border;j+=(720-2*border)/(rows-1))
 		circle(cv_image,Point(i,j),5,Scalar(0,255,0),3,8,0);

@@ -58,7 +58,7 @@ def read_calib_data(filename):
         left_scene_point2d_list.append(left_scene_point2d)
     # print count
 
-length_scale = [5, 5, 5, 5]#3 originally
+length_scale = [100, 100, 100, 100]#3 originally
 length_scale_bounds = [(1e-05, 100000.0), (1e-05, 100000.0), (1e-05, 100000.0), (1e-05, 100000.0)]
 
 gp_kernel_lsx = RBF(length_scale=length_scale, length_scale_bounds=length_scale_bounds)
