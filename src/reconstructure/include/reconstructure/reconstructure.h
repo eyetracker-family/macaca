@@ -29,6 +29,7 @@ using namespace cv;
 using namespace std;
 
 static vector<double> observed_object(3,0.0);//object position to send
+int num_target_object=0;
 
 bool selectObject;
 Rect selection;
@@ -370,14 +371,14 @@ geometry_msgs::Point FindClosestObject(vector<pair<Point2d,Point3d>> center_posi
 	point.z=center_position_array[order].second.z;
 	return point;
 }
-geometry_msgs::Point Find_Target_Object(vector<pair<int,Point3d>> label_position_array,Point2d (&gaze_point_array)[30],Mat label,int nccomps)
+geometry_msgs::Point Find_Target_Object(vector<pair<int,Point3d>> label_position_array,Point2d (&gaze_point_array)[30],Mat label,int nccomps,int &num_target_object)
 {
 	geometry_msgs::Point pos_target;
 	pos_target.x=pos_target.y=pos_target.z=0;
 	vector<int> count(nccomps,0);
 	for(int i=0;i<30;i++)
 	{
-		if(gaze_point_array[i].x>1&&gaze_point_array[i].y>1)
+		if(gaze_point_array[i].x>1&&gaze_point_array[i].y>1)//remove the effect of (0,0)
 		{
 			int index=label.at<int>(gaze_point_array[i].y,gaze_point_array[i].x);
 			count[index]++;
@@ -391,6 +392,7 @@ geometry_msgs::Point Find_Target_Object(vector<pair<int,Point3d>> label_position
 			{
 				if(label_position_array[j].first==i)
 				{
+					num_target_object=i;
 					pos_target.x=label_position_array[j].second.x;
 					pos_target.y=label_position_array[j].second.y;
 					pos_target.z=label_position_array[j].second.z;

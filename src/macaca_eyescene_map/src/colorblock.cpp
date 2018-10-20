@@ -17,6 +17,7 @@
 #include <algorithm>
 
 #include "opencv2/calib3d/calib3d.hpp"
+#include <opencv2/aruco.hpp>
 
 using namespace std;
 using namespace cv;
@@ -57,161 +58,6 @@ void configCallback(macaca_eyescene_map::ColorBlockConfig &config, uint32_t) {
   thresh = config.thresh;
   min_area = config.min_area;
   max_area = config.max_area;
-}
-
-
-void SeedFillNew(const cv::Mat& _binImg, cv::Mat& _lableImg, std::vector<int>& labelAreaMap )  
-{  
-  // connected component analysis(4-component)  
-  // use seed filling algorithm  
-  // 1. begin with a forgeground pixel and push its forground neighbors into a stack;  
-  // 2. pop the pop pixel on the stack and label it with the same label until the stack is empty  
-  //   
-  //  forground pixel: _binImg(x,y)=1  
-  //  background pixel: _binImg(x,y) = 0  
-
-
-  if(_binImg.empty() ||  
-     _binImg.type()!=CV_8UC1)  
-  {  
-    return;  
-  }   
-
-  _lableImg.release();  
-  _binImg.convertTo(_lableImg,CV_32SC1);  
-
-  int label = 0; //start by 1  
-  labelAreaMap.clear();
-  labelAreaMap.push_back(0);
-
-  int rows = _binImg.rows;  
-  int cols = _binImg.cols;  
-
-  Mat mask(rows, cols, CV_8UC1);  
-  mask.setTo(0);  
-  int *lableptr;  
-  for(int i=0; i < rows; i++)  
-  {  
-    int* data = _lableImg.ptr<int>(i);  
-    uchar *masKptr = mask.ptr<uchar>(i);
-    for(int j = 0; j < cols; j++)  
-    {  
-      if(data[j] == 255&&mask.at<uchar>(i,j)!=1)  
-      {  
-        mask.at<uchar>(i,j)=1;  
-        std::stack<std::pair<int,int>> neighborPixels;  
-        neighborPixels.push(std::pair<int,int>(i,j)); // pixel position: <i,j>  
-        ++label; //begin with a new label  
-        int area = 0;
-        while(!neighborPixels.empty())  
-        {  
-          //get the top pixel on the stack and label it with the same label  
-          std::pair<int,int> curPixel =neighborPixels.top();  
-          int curY = curPixel.first;  
-          int curX = curPixel.second;  
-          _lableImg.at<int>(curY, curX) = label;  
-
-          //pop the top pixel  
-          neighborPixels.pop();  
-
-          //push the 4-neighbors(foreground pixels)  
-
-          if(curX-1 >= 0)  
-          {  
-            if(_lableImg.at<int>(curY,curX-1) == 255&&mask.at<uchar>(curY,curX-1)!=1) //leftpixel  
-            {  
-              neighborPixels.push(std::pair<int,int>(curY,curX-1));  
-              mask.at<uchar>(curY,curX-1)=1;  
-              area++;
-            }  
-          }  
-          if(curX+1 <=cols-1)  
-          {  
-            if(_lableImg.at<int>(curY,curX+1) == 255&&mask.at<uchar>(curY,curX+1)!=1)  
-              // right pixel  
-            {  
-              neighborPixels.push(std::pair<int,int>(curY,curX+1));  
-              mask.at<uchar>(curY,curX+1)=1;  
-              area++;
-            }  
-          }  
-          if(curY-1 >= 0)  
-          {  
-            if(_lableImg.at<int>(curY-1,curX) == 255&&mask.at<uchar>(curY-1,curX)!=1)  
-              // up pixel  
-            {  
-              neighborPixels.push(std::pair<int,int>(curY-1, curX));  
-              mask.at<uchar>(curY-1,curX)=1;  
-              area++;
-            }    
-          }  
-          if(curY+1 <= rows-1)  
-          {  
-            if(_lableImg.at<int>(curY+1,curX) == 255&&mask.at<uchar>(curY+1,curX)!=1)  
-              //down pixel  
-            {  
-              neighborPixels.push(std::pair<int,int>(curY+1,curX));  
-              mask.at<uchar>(curY+1,curX)=1;  
-              area++;
-            }  
-          }  
-        }  
-        labelAreaMap.push_back(area);
-      }  
-    }  
-  }  
-}  
-
-cv::Point GetColorBlockCenter(const cv::Mat& rgb, cv::Mat& binary, int thresh, int min_area, int max_area) {
-  cv::Point ret(0, 0);
-
-  cv::Mat hsv3;
-  std::vector<cv::Mat> hsv;
-  cv::cvtColor(rgb, hsv3, cv::COLOR_RGB2HSV);
-  cv::split(hsv3, hsv);
-  vector<Vec3f> circles;
-  cv::Mat hssub = (hsv[1] -hsv[0])*0.5;
-  cv::threshold(hssub, binary, thresh, 255, cv::THRESH_BINARY);
-  // TODO 腐蚀膨胀
-
-  cv::Mat label;
-  std::vector<int> labelAreaMap;
-  SeedFillNew(binary, label,labelAreaMap);
-
-  std::vector<std::pair<int, int>> labelAreas;
-  for (int i=1; i < labelAreaMap.size();++i) {
-    int area = labelAreaMap[i];
-    if (area > min_area && area < max_area) {
-      labelAreas.push_back(std::pair<int,int>(labelAreaMap[i], i));
-    }
-  }
-
-  if (!labelAreas.empty()) {
-    std::sort(labelAreas.begin(), labelAreas.end(), [](const std::pair<int, int>&a,const std::pair<int, int>& b) {
-      return a.first > b.first;
-    });
-    long long x = 0, y = 0, count = 0;
-    for (int i = 0; i < label.rows; ++i) {
-      for (int j =0; j < label.cols;++j) {
-        int value = label.at<int>(i,j);
-        if (value != labelAreas[0].second)  binary.at<uchar>(i,j) = 0;
-        else {
-          x += j;
-          y += i;
-          count++;
-        }
-      }
-    }
-    if (count != 0) {
-      ret = cv::Point(x/count, y/count);
-    }
-  }
-  else {
-    binary.setTo(0);
-  }
-
-
-  return ret;
 }
 
 int WriteCalibrationData(std::string filename) {
@@ -336,12 +182,31 @@ void remap_init(Mat &map11, Mat &map12)
 
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg) {
-	cv::Mat cv_image = cv_bridge::toCvCopy(msg, "rgb8")->image;
+	cv::Mat cv_image = cv_bridge::toCvCopy(msg, "bgr8")->image;
 
 	remap_init(map11,map12);
 	remap(cv_image, cv_image, map11, map12, INTER_LINEAR);
 
-  cv::Point center = GetColorBlockCenter(cv_image, binary, thresh, min_area, max_area);
+  //cv::Point center = GetColorBlockCenter(cv_image, binary, thresh, min_area, max_area);
+
+	Ptr<aruco::Dictionary> dictionary =aruco::getPredefinedDictionary(aruco::PREDEFINED_DICTIONARY_NAME(0));
+
+	std::vector<int> ids; 
+	std::vector<std::vector<cv::Point2f> > corners; 
+	cv::aruco::detectMarkers(cv_image, dictionary, corners, ids);
+
+	cv::Point center(0,0);
+	if ( ids.size() > 0) {
+		cv::aruco::drawDetectedMarkers(cv_image, corners, ids);
+		// cout<<1<<endl;
+		//cout<< "ids.size() = "<< ids.size() << endl ;
+		//cout<<"corners.size = "<<corners.size() << endl;
+		int cornersSize=corners.size();
+		//cout<< "corners[0][0] = "<< corners[0][0].x<<" "<< corners[0][0].y<<endl;
+		center.x=corners[0][0].x;
+		center.y=corners[0][0].y;
+	}
+
   if (center.x != 0 || center.y !=0) {
     left_scene_point2d.x = center.x;
     left_scene_point2d.y = center.y;
@@ -351,7 +216,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg) {
   /*for(int i=256;i<1280;i+=256)
 	for(int j=144;j<720;j+=144)
 		circle(cv_image,Point(i,j),5,Scalar(0,255,0),3,8,0);*/
-  int border=150,rows=3,cols=4;
+  int border=100,rows=4,cols=5;
   for(int i=border;i<=1280-border;i+=(1280-2*border)/(cols-1))
 	for(int j=border;j<=720-border;j+=(720-2*border)/(rows-1))
 		circle(cv_image,Point(i,j),5,Scalar(0,255,0),3,8,0);

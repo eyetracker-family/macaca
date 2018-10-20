@@ -81,8 +81,8 @@ int main(int argc, char* argv[]) {
     tf::Vector3 origin(tvec(0), tvec(1), tvec(2));
     if (!isnan(rotation.x()) && !isnan(rotation.y())&& !isnan(rotation.z()) && !isnan(rotation.w()) && std::abs(origin.x()) < 5 && std::abs(origin.y()) < 5 && abs(origin.z()) < 5 ) {
       tf::Transform t(rotation, origin);
-      tf::StampedTransform lighthouseToMarker(t, time, lighthouse_frame, marker_frame);
-      tf_broadcaster->sendTransform(lighthouseToMarker);
+      tf::StampedTransform EyetrackerToLighthouse(t, time, lighthouse_frame, marker_frame);
+      tf_broadcaster->sendTransform(EyetrackerToLighthouse);
     }
     usleep(1000);
   }

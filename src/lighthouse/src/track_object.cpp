@@ -90,7 +90,7 @@ bool TrackObject::Consume() {
   for (int i = 0; i < 36; ++i) {
     if (light_sensor_data_packet.timetick[2*i] == 0 || light_sensor_data_packet.timetick[2*i+1] == 0)
       continue;
-     cout << light_sensor_data_packet.timetick[2*i] << "," << light_sensor_data_packet.timetick[2*i+1] << "  ";
+     cout << light_sensor_data_packet.timetick[2*i] << "," << light_sensor_data_packet.timetick[2*i+1] << "  "<<endl;
     double angle_x = TimetickToAngle(light_sensor_data_packet.timetick[2*i]);
     double angle_y = TimetickToAngle(light_sensor_data_packet.timetick[2*i + 1]);
 

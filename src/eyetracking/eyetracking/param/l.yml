@@ -1,8 +1,8 @@
 Radius_Min: 10
-Radius_Max: 80
+Radius_Max: 40
 CannyBlur: 1
-CannyThreshold1: 20
-CannyThreshold2: 40
+CannyThreshold1: 15
+CannyThreshold2: 30
 StarburstPoints: 90
 PercentageInliers : 30
 InlierIterations: 2

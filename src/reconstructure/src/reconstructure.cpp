@@ -158,6 +158,7 @@ int main(int argc, char **argv)
 			ss<<i+1;
 			string str=ss.str();
 			putText(img1r,str,Point(centroids0.at<double>(center_l[i].first,0)+20,centroids0.at<double>(center_l[i].first,1)+20),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,0));
+			putText(img1r,"target",Point(centroids0.at<double>(1,0)-45,centroids0.at<double>(1,1)-20),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,0));//num_target_object
 		}
 		for(int i=0;i<center_r.size();i++)
 		{
@@ -240,16 +241,16 @@ int main(int argc, char **argv)
 		{
 			if(centroids0.at<double>(center_l[i].first,0)-centroids1.at<double>(center_r[i].first,0)>0&&centroids0.at<double>(center_l[i].first,0)-centroids1.at<double>(center_r[i].first,0)<300&&minimum<5)//multi object
 			{
-				cout<<"The "<<count2<<"th object is at ["<< xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[0]<<","<<-xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[1]<<","<<xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[2]<<"]"<<endl;
+				cout<<"The "<<count2<<"th object is at ["<< xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[0]<<","<<xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[1]<<","<<xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[2]<<"]"<<endl;
 				count2++;
 
-				label_position_array.push_back(pair<int,Point3d>(center_l[i].first,Point3d(xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[0],-xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[1],xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[2])));
+				label_position_array.push_back(pair<int,Point3d>(center_l[i].first,Point3d(xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[0],xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[1],xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[2])));
 			}
 		}
 		geometry_msgs::Point pos;
 		if(label_position_array.size()>0)
 		{
-			pos=Find_Target_Object(label_position_array,gaze_point_array,labels0,nccomps0);
+			pos=Find_Target_Object(label_position_array,gaze_point_array,labels0,nccomps0,num_target_object);
 		}
 		else
 			pos.x=pos.y=pos.z=0;
