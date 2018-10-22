@@ -12,7 +12,7 @@ int main(int argc, char **argv)
     image_transport::Subscriber sub_left=it_left.subscribe("scene/left/image_raw",1,ImageCallback_left);
     image_transport::Subscriber sub_right=it_right.subscribe("scene/right/image_raw",1,ImageCallback_right);
 
-	ros::Publisher pos_pub=nh.advertise<geometry_msgs::Point>("scene/pos",1000);
+	ros::Publisher pos_pub=nh.advertise<geometry_msgs::PointStamped>("scene/left/point",1000);
 	ros::Subscriber sub=nh.subscribe("/scene/left/fit_point",1000,ImagePoint_callback);
 
 	FileStorage fs(intrinsic_filename, FileStorage::READ);
@@ -247,18 +247,19 @@ int main(int argc, char **argv)
 				label_position_array.push_back(pair<int,Point3d>(center_l[i].first,Point3d(xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[0],xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[1],xyz.at<Vec3f>(centroids0.at<double>(center_l[i].first,1),centroids0.at<double>(center_l[i].first,0))[2])));
 			}
 		}
-		geometry_msgs::Point pos;
+		geometry_msgs::PointStamped pos;
 		if(label_position_array.size()>0)
 		{
 			pos=Find_Target_Object(label_position_array,gaze_point_array,labels0,nccomps0,num_target_object);
 		}
 		else
-			pos.x=pos.y=pos.z=0;
+			pos.point.x=pos.point.y=pos.point.z=0;
 
 		cout<<"gaze_point: "<<gaze_point_array[29].x<<","<<gaze_point_array[29].y<<endl;
-		cout<<"pos of observing object: "<<pos.x<<","<<pos.y<<","<<pos.z<<endl;
+		cout<<"pos of observing object: "<<pos.point.x<<","<<pos.point.y<<","<<pos.point.z<<endl;
 
-		pos_pub.publish(pos);//publish the positon of observed object.
+		if(pos.point.x!=0)
+			pos_pub.publish(pos);//publish the positon of observed object.
 
 		//Mat vdispRGB = disp8;
 		//cvtColor(disp8, vdispRGB, COLOR_GRAY2BGR);

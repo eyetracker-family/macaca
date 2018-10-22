@@ -14,37 +14,83 @@
 using namespace std;
 using namespace cv;
 
-serial::Serial ser; //declare the serial object
+serial::Serial ser_arm,ser_hand; //declare the serial object
 //tf::TransformListener tf_lighthouse_eyetracker_listener;
 tf::StampedTransform lighthouse_eyetracker;
-Point3d pos;
+geometry_msgs::PointStamped ls_pos,lighthouse_pos;
+unsigned char data[16],hand_cmd[5];
 
-/*void write_callback(const std_msgs::String::ConstPtr& msg) 
-{ 
-    ROS_INFO_STREAM("Writing to serial port: " <<msg->data); 
-    size_t i=ser.write(msg->data);   //send data via serial port
-	cout<<"data sended: "<<i<<endl;
-} */
+void Ser_Arm_Initialize()
+{
+    try 
+    { 
+        ser_arm.setPort("/dev/ttyUSB0"); 
+        ser_arm.setBaudrate(115200); 
+        serial::Timeout to = serial::Timeout::simpleTimeout(1000); 
+        ser_arm.setTimeout(to); 
+        ser_arm.open(); 
+    } 
+    catch (serial::IOException& e) 
+    { 
+        ROS_ERROR_STREAM("Unable to open port for Arm"); 
+        return; 
+    } 
+    if(ser_arm.isOpen()) 
+    { 
+        ROS_INFO_STREAM("Serial_Arm Port initialized"); 
+    } 
+    else 
+    { 
+        return; 
+    } 
+}
+
+void Ser_Hand_Initialize()
+{
+    try 
+    { 
+        ser_hand.setPort("/dev/ttyUSB1"); 
+        ser_hand.setBaudrate(115200); 
+        serial::Timeout to = serial::Timeout::simpleTimeout(1000); 
+        ser_hand.setTimeout(to); 
+        ser_hand.open(); 
+    } 
+    catch (serial::IOException& e) 
+    { 
+        ROS_ERROR_STREAM("Unable to open port for Hand"); 
+        return; 
+    } 
+    if(ser_hand.isOpen()) 
+    { 
+        ROS_INFO_STREAM("Serial_Hand Port initialized"); 
+    } 
+    else 
+    { 
+        return; 
+    } 
+}
 
 void transformPoint(const tf::TransformListener &listener)
 {
 	//Mat pos_scene=(Mat_<double>(4,1)<<pos.x,pos.y,pos.z,1);//left scene
-	Mat pos_scene=(Mat_<double>(4,1)<<0,0,0,1);//left scene
+
+	/*Mat pos_scene=(Mat_<double>(4,1)<<0,0,0,1);//left scene
 	Mat transform_matrix=(Mat_<double>(4,4)<<-1,0,0,31.49,0,-0.9848,-0.1736,0.37,0,-0.1736,0.9848,137.68,0,0,0,1);//transform matrix between left scene camera and eyetracker.
 	//Mat pos_eyetracker
 	Mat pos_eyetracker=transform_matrix*pos_scene;
-	cout<<"eyetracker_pos: "<<endl<<pos_eyetracker<<endl;
+	cout<<"eyetracker_pos: "<<endl<<pos_eyetracker<<endl;*/
 
-	geometry_msgs::PointStamped object_pos,lighthouse_pos;
-	object_pos.header.frame_id="eyetracker_link";
+	/*geometry_msgs::PointStamped object_pos,lighthouse_pos;
+	object_pos.header.frame_id="lscene_link";//eyetracker_link lscene_link
 	object_pos.header.stamp=ros::Time();
-	object_pos.point.x=pos_eyetracker.at<double>(0,0)/1000;
-	object_pos.point.y=pos_eyetracker.at<double>(1,0)/1000;
-	object_pos.point.z=pos_eyetracker.at<double>(2,0)/1000;
+	object_pos.point.x=pos.x/1000;
+	object_pos.point.y=pos.y/1000;
+	object_pos.point.z=pos.z/1000;*/
+
 
 	try
 	{
-		listener.transformPoint("lighthouse_link",object_pos,lighthouse_pos);//coordinate transform
+		listener.transformPoint("robot_link",ls_pos,robot_pos);//coordinate transform
 		//cout<<"pos_lighthouse: ["<<lighthouse_pos.point.x<<","<<lighthouse_pos.point.y<<","<<lighthouse_pos.point.z<<"]"<<endl;
 	}
 	catch(tf::TransformException &ex)
@@ -52,63 +98,18 @@ void transformPoint(const tf::TransformListener &listener)
 		ROS_ERROR("exception aroused while coordinate transform!!!");
 	}
 
-	cout<<"lighthouse_pos: "<<endl<<lighthouse_pos<<endl;
+	cout<<"robot_pos: "<<endl<<robot_pos<<endl;
 
-	char data[16];
-	data[0]=0X55;data[1]=0X01;data[2]=0X01;data[3]=0X0C;//header
-
-	/*data[4]=(short int)(msg->x*10)>>8;data[5]=(short int)(msg->x*10)&0xff;//x
-	data[6]=(short int)(msg->y*10)>>8;data[7]=(short int)(msg->y*10)&0xff;//y
-	data[8]=(short int)(msg->z*10)>>8;data[9]=(short int)(msg->z*10)&0xff;//z*/
-
-	data[4]=0x01;data[5]=0x01;//roll
-	data[6]=0x01;data[7]=0x01;//pitch
-	data[8]=0x01;data[9]=0x01;//yaw
-
-	short int a=(short int)(lighthouse_pos.point.x*10);
-	//short int a=183;
-	char* temp1=(char *)&a;
-	data[10]=temp1[1];data[11]=temp1[0];//x
-
-	short int b=(short int)(lighthouse_pos.point.y*10);
-	//short int b=-1;
-	char* temp2=(char *)&a;
-	data[12]=temp2[1];data[13]=temp2[0];//y
-
-	short int c=(short int)(lighthouse_pos.point.z*10);
-	//short int c=-1;
-	char* temp3=(char *)&a;
-	data[14]=temp3[1];data[15]=temp3[0];//z
-
-	short int pi=1234;
-	char* temp=(char *)&pi;
-	//data[16]=temp[1];data[17]=temp[0];//z
-	short int* res=(short int*)temp;
-	cout<<"res: "<<*res<<endl;
-
-	//data[16]=((short int)(1234))>>8;data[17]=((short int)(1234))&0xff;//z
-	//cout<<"data[16]: "<<data[16]<<"data[17]: "<<data[17]<<endl;
-
-	/*printf("%#x\n",data[16]);
-	printf("%#x\n",data[17]);*/
-
-    ROS_INFO_STREAM("Writing to serial port: " <<pos.x<<","<<pos.y<<","<<pos.z); 
-	//double x=msg->x;
-	//ostringstream os;
-	//os<<'#'<<observed_object[0]<<'*'<<observed_object[1]<<'*'<<observed_object[2];
-	//os<<msg->x;
-	//int i=ser.write(os.str());
-    size_t i=ser.write(data);   
-	cout<<"data sended to serial: "<<i<<endl;
 }
 
-void pos_callback(const geometry_msgs::Point::ConstPtr& msg) 
+void pos_callback(const geometry_msgs::PointStamped::ConstPtr& msg) 
 {
-	pos.x=msg->x;
+	ls_pos=*msg;
+	/*pos.x=msg->x;
 	pos.y=msg->y;
-	pos.z=msg->z;
+	pos.z=msg->z;*/
+}
 
-} 
 int main (int argc, char** argv) 
 { 
     ros::init(argc, argv, "serial_example_node"); 
@@ -119,62 +120,65 @@ int main (int argc, char** argv)
 
     //ros::Publisher read_pub = nh.advertise<std_msgs::String>("read", 1000); 
   
-    try 
-    { 
-        ser.setPort("/dev/ttyUSB1"); 
-        ser.setBaudrate(115200); 
-        serial::Timeout to = serial::Timeout::simpleTimeout(1000); 
-        ser.setTimeout(to); 
-        ser.open(); 
-    } 
-    catch (serial::IOException& e) 
-    { 
-        ROS_ERROR_STREAM("Unable to open port "); 
-        return -1; 
-    } 
-    if(ser.isOpen()) 
-    { 
-        ROS_INFO_STREAM("Serial Port initialized"); 
-    } 
-    else 
-    { 
-        return -1; 
-    } 
+	Ser_Arm_Initialize();
+	Ser_Hand_Initialize();
+
+
     ros::Rate loop_rate(50); 
 	tf::TransformListener tf_lighthouse_eyetracker_listener;
 
 	ros::Timer timer=nh.createTimer(ros::Duration(1.0),boost::bind(&transformPoint,boost::ref(tf_lighthouse_eyetracker_listener)));
 
+
+	data[0]=0x55;data[1]=0x01;data[2]=0x01;data[3]=0x0C;//header
+
+	/*data[4]=(short int)(msg->x*10)>>8;data[5]=(short int)(msg->x*10)&0xff;//x*/
+
+	data[4]=0x01;data[5]=0x01;//roll
+	data[6]=0x01;data[7]=0x01;//pitch
+	data[8]=0x01;data[9]=0x01;//yaw
+
+	//short int a=(short int)(robot_pos.point.x*1000*10);//plus 10 to reserve one digit after the dot.
+	short int a=1540;
+	unsigned char* temp1=(unsigned char *)&a;
+	data[10]=temp1[1];data[11]=temp1[0];//x
+
+	//short int b=(short int)(robot_pos.point.y*1000*10);
+	short int b=-630;
+	unsigned char* temp2=(unsigned char *)&b;
+	data[12]=temp2[1];data[13]=temp2[0];//y
+
+	//short int c=(short int)(robot_pos.point.z*1000*10);
+	short int c=1560;
+	unsigned char* temp3=(unsigned char *)&c;
+	data[14]=temp3[1];data[15]=temp3[0];//z
+
+	/*short int pi=-8;
+	unsigned char* temp=(unsigned char *)&pi;
+	printf("%#x\n",temp[1]);
+	printf("%#x\n",temp[0]);
+	//data[16]=temp[1];data[17]=temp[0];//z
+	short int* res=(short int*)temp;
+	cout<<"res: "<<*res<<endl;*/
+
+    ROS_INFO_STREAM("Writing to serial port: " <<ls_pos.point.x<<","<<ls_pos.point.y<<","<<ls_pos.point.z); 
+
+    size_t i=ser_arm.write(data,16);
+	cout<<"data sended to serial: "<<i<<endl;
+
+
+	string arm_returned_cmd;
     while(ros::ok()) 
     { 
-  
-        /*if(ser.available()){ 
-            ROS_INFO_STREAM("Reading from serial port\n"); 
-            std_msgs::String result; 
-            result.data = ser.read(ser.available()); 
-            ROS_INFO_STREAM("Read: " << result.data); 
-            read_pub.publish(result); 
-        } */
-		//cout<<observed_object[0]<<endl;
-		//ostringstream os;
-		//os<<'#'<<observed_object[0]<<'*'<<observed_object[1]<<'*'<<observed_object[2];
-		//os<<'#'<<0<<'*'<<1<<'*'<<2;
-		//int i=ser.write(os.str());
-		//cout<<"data sended: "<<i<<endl;
-
-		/*try
+		/*arm_returned_cmd = ser_arm.read(16+1);
+		if(arm_returned_cmd[0]==0x55)
 		{
-			tf_lighthouse_eyetracker_listener.lookupTransform("/lighthouse_link","/eyetracker_link",ros::Time(0),lighthouse_eyetracker);
-			cout<<lighthouse_eyetracker.getOrigin()<<endl;
-		}
-		catch(tf::TransformException &ex)
-		{
-			//ROS_ERROR("s%",ex.what());
-			continue;
+			hand_cmd[0]=0xAA;hand_cmd[1]=0x01;hand_cmd[2]=0x04;hand_cmd[3]=0x03;hand_cmd[4]=0x55;
+			int i=ser_hand.write(hand_cmd,5);
+			arm_returned_cmd="abc";
 		}*/
 
         ros::spinOnce(); 
         loop_rate.sleep(); 
-  
     } 
 } 

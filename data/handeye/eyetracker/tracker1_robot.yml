@@ -1,0 +1,11 @@
+%YAML:1.0
+ArmTipToMarkerTagTransform: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [ 0., 0.,
+       1., 1.455e-02,
+       -1., 0.,
+       0., -4.2e-02,
+       0., -1.,
+       0., 2.4677e-01, 0., 0., 0., 1. ]

@@ -287,45 +287,15 @@ HmdVector3_t LighthouseTracking::GetPosition(HmdMatrix34_t matrix)
 long lastPRCall = 0;
 HmdQuaternion_t LighthouseTracking::GetRotation(HmdMatrix34_t matrix)
 {
-
-//    std::cout<<"rotation  matrix:" <<std::endl;
-//    std::cout<<matrix.m[0][0]<<" "<<matrix.m[0][1]<<" "<<matrix.m[0][2]<<" "<<matrix.m[0][3]<<std::endl;
-//    std::cout<<matrix.m[1][0]<<" "<<matrix.m[1][1]<<" "<<matrix.m[1][2]<<" "<<matrix.m[1][3]<<std::endl;
-//    std::cout<<matrix.m[2][0]<<" "<<matrix.m[2][1]<<" "<<matrix.m[2][2]<<" "<<matrix.m[2][3]<<std::endl;
-
-
 	HmdQuaternion_t q;
-    double tr = matrix.m[0][0] + matrix.m[1][1] + matrix.m[2][2];
-    if( tr > 0 ) {
-      double s = 0.5f / sqrtf(tr+ 1.0f);
-      q.w = 0.25f / s;
-      q.x = ( matrix.m[2][1] - matrix.m[1][2] ) * s;
-      q.y = ( matrix.m[0][2] - matrix.m[2][0] ) * s;
-      q.z = ( matrix.m[1][0] - matrix.m[0][1] ) * s;
-    } else {
-      if ( matrix.m[0][0] > matrix.m[1][1] && matrix.m[0][0] > matrix.m[2][2] ) {
-        double s = 2.0f * sqrtf( 1.0f + matrix.m[0][0] - matrix.m[1][1] - matrix.m[2][2]);
-        q.w = (matrix.m[2][1] - matrix.m[1][2] ) / s;
-        q.x = 0.25f * s;
-        q.y = (matrix.m[0][1] + matrix.m[1][0] ) / s;
-        q.z = (matrix.m[0][2] + matrix.m[2][0] ) / s;
-      } else if (matrix.m[1][1] > matrix.m[2][2]) {
-        double s = 2.0f * sqrtf( 1.0f + matrix.m[1][1] - matrix.m[0][0] - matrix.m[2][2]);
-        q.w = (matrix.m[0][2] - matrix.m[2][0] ) / s;
-        q.x = (matrix.m[0][1] + matrix.m[1][0] ) / s;
-        q.y = 0.25f * s;
-        q.z = (matrix.m[1][2] + matrix.m[2][1] ) / s;
-      } else {
-        double s = 2.0f * sqrtf( 1.0f + matrix.m[2][2] - matrix.m[0][0] - matrix.m[1][1] );
-        q.w = (matrix.m[1][0] - matrix.m[0][1] ) / s;
-        q.x = (matrix.m[0][2] + matrix.m[2][0] ) / s;
-        q.y = (matrix.m[1][2] + matrix.m[2][1] ) / s;
-        q.z = 0.25f * s;
-      }
-    }
-//    std::cout<<"quaternion vector:" <<std::endl;
-//    std::cout<<q.w<<" "<<q.x<<" "<<q.y<<" "<<q.z<<std::endl;
 
+	q.w = sqrt(fmax(0, 1 + matrix.m[0][0] + matrix.m[1][1] + matrix.m[2][2])) / 2;
+	q.x = sqrt(fmax(0, 1 + matrix.m[0][0] - matrix.m[1][1] - matrix.m[2][2])) / 2;
+	q.y = sqrt(fmax(0, 1 - matrix.m[0][0] + matrix.m[1][1] - matrix.m[2][2])) / 2;
+	q.z = sqrt(fmax(0, 1 - matrix.m[0][0] - matrix.m[1][1] + matrix.m[2][2])) / 2;
+	q.x = copysign(q.x, matrix.m[2][1] - matrix.m[1][2]);
+	q.y = copysign(q.y, matrix.m[0][2] - matrix.m[2][0]);
+	q.z = copysign(q.z, matrix.m[1][0] - matrix.m[0][1]);
     return q;
 }
 
@@ -337,7 +307,7 @@ HmdQuaternion_t LighthouseTracking::ProcessRotation(HmdQuaternion_t quat)
 	out.y = quat.y / sin(out.w/2);
 	out.z = quat.z / sin(out.w/2);
 
-//    printf("PROCESSED w:%.3f x:%.3f y:%.3f z:%.3f\n",out.w,out.x,out.y,out.z);
+    //printf("\nPROCESSED w:%.3f x:%.3f y:%.3f z:%.3f",out.w,out.x,out.y,out.z);
 	return out;
 }
 
@@ -639,7 +609,7 @@ char* LighthouseTracking::getPoseXYZString(TrackedDevicePose_t pose, int hand)
 			if(pose.bPoseIsValid)
 				printf("%.5f\n",pos.v[i]);
 			else
-				printf("invalid\n");
+				printf("invalid\n",pos.v[i]);
 	return cB;
 }
 
@@ -658,14 +628,13 @@ void LighthouseTracking::getPoseMatrix(int deviceClass, int deviceId,double pose
         HmdQuaternion_t rot;
         vr_pointer->GetDeviceToAbsoluteTrackingPose(TrackingUniverseRawAndUncalibrated, 0, &trackedDevicePose, 1);
         position = GetPosition(trackedDevicePose.mDeviceToAbsoluteTracking);
-        rot = GetRotation(trackedDevicePose.mDeviceToAbsoluteTracking);
-		pose[0]=rot.w;        
-		pose[1]=rot.x;
-        pose[2]=rot.y;
-        pose[3]=rot.z;
-        pose[4]=position.v[0];
-        pose[5]=position.v[1];
-        pose[6]=position.v[2];
+        rot = ProcessRotation(GetRotation(trackedDevicePose.mDeviceToAbsoluteTracking));
+        pose[0]=rot.x*rot.w;
+        pose[1]=rot.y*rot.w;
+        pose[2]=rot.z*rot.w;
+        pose[3]=position.v[0];
+        pose[4]=position.v[1];
+        pose[5]=position.v[2];
     }
 
     //controller
@@ -683,16 +652,15 @@ void LighthouseTracking::getPoseMatrix(int deviceClass, int deviceId,double pose
 
         vr_pointer->GetControllerStateWithPose(TrackingUniverseRawAndUncalibrated, pC->deviceId, &controllerState, sizeof(controllerState), &trackedDevicePose);
         pC->pos = GetPosition(trackedDevicePose.mDeviceToAbsoluteTracking);
-        rot = GetRotation(trackedDevicePose.mDeviceToAbsoluteTracking);
+        rot = ProcessRotation(GetRotation(trackedDevicePose.mDeviceToAbsoluteTracking));
         //std::cout<<rot.w<<" "<<rot.x<<" "<<rot.y<<" "<<rot.z<<std::endl;
         //std::cout<<pC->pos.v[0]<<" "<<pC->pos.v[1]<<" "<<pC->pos.v[2]<<std::endl;
-		pose[0]=rot.w;        
-		pose[1]=rot.x;
-        pose[2]=rot.y;
-        pose[3]=rot.z;
-        pose[4]=pC->pos.v[0];
-        pose[5]=pC->pos.v[1];
-        pose[6]=pC->pos.v[2];
+        pose[0]=rot.x*rot.w;
+        pose[1]=rot.y*rot.w;
+        pose[2]=rot.z*rot.w;
+        pose[3]=pC->pos.v[0];
+        pose[4]=pC->pos.v[1];
+        pose[5]=pC->pos.v[2];
     }
 
     //generic tracker
@@ -709,13 +677,12 @@ void LighthouseTracking::getPoseMatrix(int deviceClass, int deviceId,double pose
 
         vr_pointer->GetControllerStateWithPose(TrackingUniverseRawAndUncalibrated, pT->deviceId, &controllerState, sizeof(controllerState), &trackedDevicePose);
         pT->pos = GetPosition(trackedDevicePose.mDeviceToAbsoluteTracking);
-        rot = GetRotation(trackedDevicePose.mDeviceToAbsoluteTracking);
-		pose[0]=rot.w;        
-		pose[1]=rot.x;
-        pose[2]=rot.y;
-        pose[3]=rot.z;
-        pose[4]=pT->pos.v[0];
-        pose[5]=pT->pos.v[1];
-        pose[6]=pT->pos.v[2];
+        rot = ProcessRotation(GetRotation(trackedDevicePose.mDeviceToAbsoluteTracking));
+        pose[0]=rot.x*rot.w;
+        pose[1]=rot.y*rot.w;
+        pose[2]=rot.z*rot.w;
+        pose[3]=pT->pos.v[0];
+        pose[4]=pT->pos.v[1];
+        pose[5]=pT->pos.v[2];
     }
 }

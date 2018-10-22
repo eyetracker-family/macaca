@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Point.h>
+#include <geometry_msgs/PointStamped.h>
 #include <eyetracking_msgs/ImagePoint.h>
 
 #include <image_transport/image_transport.h>
@@ -371,10 +372,10 @@ geometry_msgs::Point FindClosestObject(vector<pair<Point2d,Point3d>> center_posi
 	point.z=center_position_array[order].second.z;
 	return point;
 }
-geometry_msgs::Point Find_Target_Object(vector<pair<int,Point3d>> label_position_array,Point2d (&gaze_point_array)[30],Mat label,int nccomps,int &num_target_object)
+geometry_msgs::PointStamped Find_Target_Object(vector<pair<int,Point3d>> label_position_array,Point2d (&gaze_point_array)[30],Mat label,int nccomps,int &num_target_object)
 {
-	geometry_msgs::Point pos_target;
-	pos_target.x=pos_target.y=pos_target.z=0;
+	geometry_msgs::PointStamped pos_target;
+	pos_target.point.x=pos_target.point.y=pos_target.point.z=0;
 	vector<int> count(nccomps,0);
 	for(int i=0;i<30;i++)
 	{
@@ -384,7 +385,7 @@ geometry_msgs::Point Find_Target_Object(vector<pair<int,Point3d>> label_position
 			count[index]++;
 		}
 	}
-	for(int i=1;i<count.size();i++)//0 is the background
+	/*for(int i=1;i<count.size();i++)//0 is the background
 	{
 		if(count[i]>15)//condition
 		{
@@ -399,7 +400,13 @@ geometry_msgs::Point Find_Target_Object(vector<pair<int,Point3d>> label_position
 				}
 			}
 		}
-	}
+	}*/
+	num_target_object=1;
+	pos_target.header.frame_id="lscene_link";
+	pos_target.header.stamp=ros::Time();
+	pos_target.point.x=label_position_array[0].second.x/1000;
+	pos_target.point.y=label_position_array[0].second.y/1000;
+	pos_target.point.z=label_position_array[0].second.z/1000;
 	return pos_target;
 }
 
