@@ -45,7 +45,7 @@ int main(int argc,char** argv)
 			tf_broadcaster->sendTransform(Tracker1ToLighthouse);
 		}
 
-    	/*double pose_tracker2[6]={0,0,0,0,0,0};
+    	double pose_tracker2[6]={0,0,0,0,0,0};
     	htcViveTracker->getPoseMatrix(3, 1, pose_tracker2);
 
 		tf::Quaternion rotation2(pose_tracker2[0], pose_tracker2[1], pose_tracker2[2]);
@@ -55,10 +55,10 @@ int main(int argc,char** argv)
 		  tf::Transform t2(rotation2, origin2);
 		  tf::StampedTransform Tracker2ToLighthouse(t2, ros::Time::now(),"lighthouse_link","tracker2_link");
 		  tf_broadcaster->sendTransform(Tracker2ToLighthouse);
-		}*/
+		}
 
-		cout<<1<<"rotation: "<<pose_tracker1[0]<<"\t"<<pose_tracker1[1]<<"\t"<<pose_tracker1[2]<<"\t"<<"translation: "<<-pose_tracker1[4]<<"\t"<<pose_tracker1[5]<<"\t"<<-pose_tracker1[6]<<endl;
-		//cout<<2<<"rotation: "<<pose_tracker2[0]<<"\t"<<pose_tracker2[1]<<"\t"<<pose_tracker2[2]<<"\t"<<"translation: "<<-pose_tracker2[3]<<"\t"<<pose_tracker2[4]<<"\t"<<-pose_tracker2[5]<<endl;
+		cout<<1<<"rotation: "<<pose_tracker1[0]<<"\t"<<pose_tracker1[1]<<"\t"<<pose_tracker1[2]<<"\t"<<"translation: "<<pose_tracker1[4]<<"\t"<<pose_tracker1[5]<<"\t"<<pose_tracker1[6]<<endl;
+		cout<<2<<"rotation: "<<pose_tracker2[0]<<"\t"<<pose_tracker2[1]<<"\t"<<pose_tracker2[2]<<"\t"<<"translation: "<<pose_tracker2[4]<<"\t"<<pose_tracker2[5]<<"\t"<<pose_tracker2[6]<<endl;
 
 		rate.sleep();
 	}

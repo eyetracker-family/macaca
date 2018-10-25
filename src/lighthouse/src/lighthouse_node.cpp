@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   ros::init(argc, argv, "track_marker_node");
   ros::NodeHandle nh("~");
 
-  std::string usb_device_name ="/dev/ttyUSB2";
+  std::string usb_device_name ="/dev/ttyUSB0";
   std::string object_points_file = "object_points.txt";
   std::string lighthouse_frame = "pnp_link";
   std::string marker_frame = "marker_link";

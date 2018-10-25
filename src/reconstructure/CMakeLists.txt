@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   image_transport
   cv_bridge
-serial
+  serial
   dynamic_reconfigure
   )
 
@@ -46,10 +46,4 @@ target_link_libraries(reconstructure_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
  ${PCL_LIBRARIES}
-  )
-
-add_executable(ros_serial_node src/ros_serial.cpp)
-target_link_libraries(ros_serial_node
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBS}
   )

@@ -2,7 +2,6 @@
 #include <tf/transform_broadcaster.h>
 #include <opencv2/opencv.hpp>
 
-
 enum EyeTrackerTo {
   LeftSceneCamera = 0,
   RightSceneCamera,
@@ -110,7 +109,6 @@ int main(int argc, char *argv[])
 
     broadcaster.sendTransform(
       tf::StampedTransform(scene_left_tf, time, eyetracker_link, scene_left_camera_link)
-      //tf::StampedTransform(scene_left_tf, time, scene_left_camera_link,eyetracker_link )
       );
     /*broadcaster.sendTransform(
       tf::StampedTransform(scene_right_tf, time, eyetracker_link, scene_right_camera_link)
@@ -123,10 +121,8 @@ int main(int argc, char *argv[])
       );*/
     broadcaster.sendTransform(
       tf::StampedTransform(pnp2lighthouse_tf, time, "lighthouse_link", "pnp_link")
-      //tf::StampedTransform(scene_left_tf, time, scene_left_camera_link,eyetracker_link )
       );
     broadcaster.sendTransform(
-      //tf::StampedTransform(tracker1_robot_tf, time, "robot_link", "tracker1_link")
       tf::StampedTransform(tracker1_robot_tf, time, "tracker1_link", "robot_link")
       );
 

@@ -1,30 +1,18 @@
-#include <ros/ros.h>
-#include <geometry_msgs/Point.h>
-#include <geometry_msgs/PointStamped.h>
-#include <eyetracking_msgs/ImagePoint.h>
-
-#include <image_transport/image_transport.h>
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/core/utility.hpp"
+#include <ros/ros.h>
+#include <geometry_msgs/PointStamped.h>
+#include <eyetracking_msgs/ImagePoint.h>
+#include <image_transport/image_transport.h>
 
 //#include <pcl/visualization/cloud_viewer.h>   
 //#include <pcl/io/io.h>  
 //#include <pcl/io/pcd_io.h>  
 
-#include <iostream>
-#include <cmath>
-#include <stack>
 //#include <pcl/io/pcd_io.h>
 //#include <pcl/point_types.h>
 //#include <pcl/filters/statistical_outlier_removal.h>
-
-#include <stdio.h>
 
 using namespace cv;
 using namespace std;
@@ -37,8 +25,8 @@ Rect selection;
 Point2d origin,gaze_point_array[30];
 Mat xyz;
 
-std::string intrinsic_filename = "/home/macaca/macaca/src/reconstructure/src/intrinsics.yml";
-std::string extrinsic_filename = "/home/macaca/macaca/src/reconstructure/src/extrinsics.yml";
+std::string intrinsic_filename = "/home/macaca/macaca/data/reconstruction/intrinsics.yml";
+std::string extrinsic_filename = "/home/macaca/macaca/data/reconstruction/extrinsics.yml";
 
 int SADWindowSize=5, numberOfDisparities=256;//15,32//better:5,256//
 float scale=1;
@@ -47,20 +35,14 @@ Ptr<StereoBM> bm = StereoBM::create(16, 9);//originally from reconstructure.h
 Ptr<StereoSGBM> sgbm = StereoSGBM::create(0, 16, 3);
 
 Mat img1, img2;
+Mat map11, map12, map21, map22;
+Size img_size(1280,720);
 
 Rect roi1, roi2;
 Mat Q;
 Mat disp(720,1280,CV_16SC1), disp8;
 
-Mat binary_left,binary_right;
-int thresh =150;
-int min_area = 700;
-int max_area = 70000;
-
-cv_bridge::CvImagePtr cv_ptr_;
 cv::Mat img1_raw,img2_raw;
-image_transport::Subscriber image_sub_;
-image_transport::Publisher image_pub_;
 
 void ImagePoint_callback(const eyetracking_msgs::ImagePoint::ConstPtr& msg) 
 { 
@@ -127,229 +109,46 @@ static void onMouse(int event, int x, int y, int, void*)
 	}
 }
 
-void SeedFillNew(const cv::Mat& _binImg, cv::Mat& _lableImg, std::vector<int>& labelAreaMap )  
-{  
-  // connected component analysis(4-component)  
-  // use seed filling algorithm  
-  // 1. begin with a forgeground pixel and push its forground neighbors into a stack;  
-  // 2. pop the pop pixel on the stack and label it with the same label until the stack is empty  
-  //   
-  //  forground pixel: _binImg(x,y)=1  
-  //  background pixel: _binImg(x,y) = 0  
-
-  if(_binImg.empty() ||  
-     _binImg.type()!=CV_8UC1)  
-  {  
-    return;  
-  }   
-
-  _lableImg.release();  
-  _binImg.convertTo(_lableImg,CV_32SC1);  
-
-  int label = 0; //start by 1  
-  labelAreaMap.clear();
-  labelAreaMap.push_back(0);
-
-  int rows = _binImg.rows;  
-  int cols = _binImg.cols;  
-
-  Mat mask(rows, cols, CV_8UC1);  //mask is used to determine if the pixel has been visited,1 for visited and 0 for unvisited.
-  mask.setTo(0);  
-  int *lableptr;  
-  for(int i=0; i < rows; i++)  
-  {  
-    int* data = _lableImg.ptr<int>(i);  
-    uchar *masKptr = mask.ptr<uchar>(i);
-    for(int j = 0; j < cols; j++)  
-    {  
-      if(data[j] == 255&&mask.at<uchar>(i,j)!=1)  
-      {  
-        mask.at<uchar>(i,j)=1;  
-        std::stack<std::pair<int,int>> neighborPixels;  
-        neighborPixels.push(std::pair<int,int>(i,j)); // pixel position: <i,j>  
-        ++label; //begin with a new label  
-        int area = 0;
-        while(!neighborPixels.empty())  
-        {  
-          //get the top pixel on the stack and label it with the same label  
-          std::pair<int,int> curPixel =neighborPixels.top();  
-          int curY = curPixel.first;  
-          int curX = curPixel.second;  
-          _lableImg.at<int>(curY, curX) = label;  
-
-          //pop the top pixel  
-          neighborPixels.pop();  
-
-          //push the 4-neighbors(foreground pixels)  
-
-          if(curX-1 >= 0)  
-          {  
-            if(_lableImg.at<int>(curY,curX-1) == 255&&mask.at<uchar>(curY,curX-1)!=1) //leftpixel  
-            {  
-              neighborPixels.push(std::pair<int,int>(curY,curX-1));  
-              mask.at<uchar>(curY,curX-1)=1;  
-              area++;
-            }  
-          }  
-          if(curX+1 <=cols-1)  
-          {  
-            if(_lableImg.at<int>(curY,curX+1) == 255&&mask.at<uchar>(curY,curX+1)!=1)  
-              // right pixel  
-            {  
-              neighborPixels.push(std::pair<int,int>(curY,curX+1));  
-              mask.at<uchar>(curY,curX+1)=1;  
-              area++;
-            }  
-          }  
-          if(curY-1 >= 0)  
-          {  
-            if(_lableImg.at<int>(curY-1,curX) == 255&&mask.at<uchar>(curY-1,curX)!=1)  
-              // up pixel  
-            {  
-              neighborPixels.push(std::pair<int,int>(curY-1, curX));  
-              mask.at<uchar>(curY-1,curX)=1;  
-              area++;
-            }    
-          }  
-          if(curY+1 <= rows-1)  
-          {  
-            if(_lableImg.at<int>(curY+1,curX) == 255&&mask.at<uchar>(curY+1,curX)!=1)  
-              //down pixel  
-            {  
-              neighborPixels.push(std::pair<int,int>(curY+1,curX));  
-              mask.at<uchar>(curY+1,curX)=1;  
-              area++;
-            }  
-          }  
-        }  
-        labelAreaMap.push_back(area);
-      }  
-    }  
-  }  
-}  
-
-cv::Point GetColorBlockCenter(const cv::Mat& rgb, cv::Mat& binary, int thresh, int min_area, int max_area) {
-  cv::Point ret(0, 0);
-/*
-  cv::Mat hsv3;
-  std::vector<cv::Mat> hsv;
-  cv::cvtColor(rgb, hsv3, cv::COLOR_RGB2HSV);
-  cv::split(hsv3, hsv);
-  vector<Vec3f> circles;
-  cv::Mat hssub = (hsv[1] -hsv[0])*0.5;
-  cv::threshold(hssub, binary, thresh, 255, cv::THRESH_BINARY);*/
-
-cv::Mat grey;
-cv::cvtColor(rgb,grey,cv::COLOR_RGB2GRAY);
-cv::threshold(grey,binary,thresh,255,cv::THRESH_BINARY);
-  // TODO 腐蚀膨胀
-
-  cv::Mat label;
-  std::vector<int> labelAreaMap;
-  SeedFillNew(binary, label,labelAreaMap);
-
-  std::vector<std::pair<int, int>> labelAreas;
-  for (int i=1; i < labelAreaMap.size();++i) {
-    int area = labelAreaMap[i];
-    if (area > min_area && area < max_area) {
-      labelAreas.push_back(std::pair<int,int>(labelAreaMap[i], i));
-    }
-  }
-
-  if (!labelAreas.empty()) {
-    std::sort(labelAreas.begin(), labelAreas.end(), [](const std::pair<int, int>&a,const std::pair<int, int>& b) {
-      return a.first > b.first;
-    });
-    long long x = 0, y = 0, count = 0;
-    for (int i = 0; i < label.rows; ++i) {
-      for (int j =0; j < label.cols;++j) {
-        int value = label.at<int>(i,j);
-        if (value != labelAreas[0].second)  binary.at<uchar>(i,j) = 0;//if not the biggest area,set the pixel to 0(black),reserve only the biggest area in white.
-        else {
-          x += j;
-          y += i;
-          count++;
-        }
-      }
-    }
-    if (count != 0) {
-      ret = cv::Point(x/count, y/count);
-    }
-  }
-  else {
-    binary.setTo(0);
-  }
-
-
-  return ret;
-}
-
-vector<std::pair<cv::Point,long long>> GetMultiColorBlockCenter(const cv::Mat& rgb, cv::Mat& binary, int thresh, int min_area, int max_area) {
-  vector<std::pair<cv::Point,long long>> center_area;
-/*
-  cv::Mat hsv3;
-  std::vector<cv::Mat> hsv;
-  cv::cvtColor(rgb, hsv3, cv::COLOR_RGB2HSV);
-  cv::split(hsv3, hsv);
-  vector<Vec3f> circles;
-  cv::Mat hssub = (hsv[1] -hsv[0])*0.5;
-  cv::threshold(hssub, binary, thresh, 255, cv::THRESH_BINARY);*/
-
-	cv::Mat grey;
-	cv::cvtColor(rgb,grey,cv::COLOR_RGB2GRAY);
-	cv::threshold(grey,binary,thresh,255,cv::THRESH_BINARY);
-  // TODO 腐蚀膨胀
-
-  cv::Mat label;
-  std::vector<int> labelAreaMap;
-  SeedFillNew(binary, label,labelAreaMap);
-
-  std::vector<std::pair<int, int>> labelAreas;
-  for (int i=1; i < labelAreaMap.size();++i) {
-    int area = labelAreaMap[i];
-    if (area > min_area && area < max_area) {
-      labelAreas.push_back(std::pair<int,int>(labelAreaMap[i], i));
-    }
-  }
-
-  if (!labelAreas.empty()) {
-    std::sort(labelAreas.begin(), labelAreas.end(), [](const std::pair<int, int>&a,const std::pair<int, int>& b) {
-      return a.first > b.first;
-    });
-
-	vector<int> labels;//for searching
-	for(int k=0;k<labelAreas.size();k++) labels.push_back(labelAreas[k].second);
-
-    vector<long long> x(labelAreaMap.size(),0),y(labelAreaMap.size(),0),count(labelAreaMap.size(),0);
-	
-    for (int i = 0; i < label.rows; ++i) 
+void stereo_calibrate_initialize()
+{
+	FileStorage fs(intrinsic_filename, FileStorage::READ);
+	if (!fs.isOpened())
 	{
-      for (int j =0; j < label.cols;++j) 
-	  {
-        int value = label.at<int>(i,j);
-        //if (value != labelAreas[0].second)  binary.at<uchar>(i,j) = 0;
-		if(find(labels.begin(),labels.end(),value)==labels.end()) 
-			binary.at<uchar>(i,j) = 0;
-		else
-	    {
-          x[value] += j;
-          y[value] += i;
-          count[value]++;
-        }
-      }
-    }
-	for(int m=0;m<count.size();m++)
-	{
-		if (count[m] != 0) 
-		{
-		  center_area.push_back(std::pair<cv::Point,long long>(cv::Point(x[m]/count[m], y[m]/count[m]),count[m]));
-		}
+		printf("Failed to open file %s\n", intrinsic_filename.c_str());
+		return;
 	}
-  }
-  else {
-    binary.setTo(0);
-  }
-  return center_area;
+
+	Mat M1, D1, M2, D2;
+	fs["M1"] >> M1;
+	fs["D1"] >> D1;
+	fs["M2"] >> M2;
+	fs["D2"] >> D2;
+
+	M1 *= scale;
+	M2 *= scale;
+
+	fs.open(extrinsic_filename, FileStorage::READ);
+	if (!fs.isOpened())
+	{
+		printf("Failed to open file %s\n", extrinsic_filename.c_str());
+		return;
+	}
+
+	Mat R, T, R1, P1, R2, P2;
+	fs["R"] >> R;
+	fs["T"] >> T;
+
+	stereoRectify(M1, D1, M2, D2, img_size, R, T, R1, R2, P1, P2, Q, CALIB_ZERO_DISPARITY, -1, img_size, &roi1, &roi2);
+	cout<<"roi1.size: "<<roi1.size()<<endl;
+	cout<<"roi2.size: "<<roi2.size()<<endl;
+	cout<<"matrix M1: "<<M1<<endl;
+	cout<<"matrix D1: "<<D1<<endl;
+	cout<<"matrix R1: "<<R1<<endl;
+	cout<<"matrix R2: "<<R2<<endl;
+	cout<<"matrix Q: "<<Q<<endl;
+
+	initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);
+	initUndistortRectifyMap(M2, D2, R2, P2, img_size, CV_16SC2, map21, map22);
 }
 
 geometry_msgs::Point FindClosestObject(vector<pair<Point2d,Point3d>> center_position_array,Point2d gaze_point)

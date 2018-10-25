@@ -1,5 +1,5 @@
 <launch>
-  <arg name="usb_device_name" default="/dev/ttyUSB2" />
+  <arg name="usb_device_name" default="/dev/ttyUSB0" />
   <arg name="object_points_file" default="$(find lighthouse)/../../data/lighthouse/eyetracker_points.txt"/>
   <arg name="world_frame" default="pnp_link"/>
   <arg name="lighthouse_frame" default="pnp_link"/>

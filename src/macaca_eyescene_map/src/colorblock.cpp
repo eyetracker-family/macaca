@@ -1,11 +1,8 @@
 #include <ros/ros.h>
 #include <termios.h>
-#include <ar_track_alvar/MarkerPoseService.h>
-#include <sensor_msgs/CameraInfo.h>
-#include <geometry_msgs/Pose.h>
 
 #include <dynamic_reconfigure/server.h>
-#include <tf/transform_datatypes.h>
+
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <eyetracking_msgs/RotatedRect.h>
@@ -22,8 +19,8 @@
 using namespace std;
 using namespace cv;
 
-std::string intrinsic_filename = "/home/macaca/macaca/src/reconstructure/src/intrinsics.yml";
-std::string extrinsic_filename = "/home/macaca/macaca/src/reconstructure/src/extrinsics.yml";
+std::string intrinsic_filename = "/home/macaca/macaca/data/reconstruction/intrinsics.yml";
+std::string extrinsic_filename = "/home/macaca/macaca/data/reconstruction/extrinsics.yml";
 Mat map11, map12;
 
 bool leftsceneDone = false;
@@ -176,7 +173,6 @@ void remap_init(Mat &map11, Mat &map12)
 	Rect roi1, roi2;
 
 	stereoRectify(M1, D1, M2, D2, img_size, R, T, R1, R2, P1, P2, Q, CALIB_ZERO_DISPARITY, -1, img_size, &roi1, &roi2);
-
 	initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);
 }
 

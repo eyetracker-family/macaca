@@ -4,43 +4,16 @@ int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "image_listener");
 	ros::NodeHandle nh;
-   //cv::namedWindow("view");
-	image_transport::ImageTransport it_left(nh);
 
-    image_transport::ImageTransport it_right(nh);
+	image_transport::ImageTransport it(nh);
 
-    image_transport::Subscriber sub_left=it_left.subscribe("scene/left/image_raw",1,ImageCallback_left);
-    image_transport::Subscriber sub_right=it_right.subscribe("scene/right/image_raw",1,ImageCallback_right);
+    image_transport::Subscriber sub_left=it.subscribe("scene/left/image_raw",1,ImageCallback_left);
+    image_transport::Subscriber sub_right=it.subscribe("scene/right/image_raw",1,ImageCallback_right);
+	image_transport::Publisher left_pub= it.advertise("scene/left/image", 1);
+	image_transport::Publisher right_pub= it.advertise("scene/right/image", 1);
 
 	ros::Publisher pos_pub=nh.advertise<geometry_msgs::PointStamped>("scene/left/point",1000);
 	ros::Subscriber sub=nh.subscribe("/scene/left/fit_point",1000,ImagePoint_callback);
-
-	FileStorage fs(intrinsic_filename, FileStorage::READ);
-	if (!fs.isOpened())
-	{
-		printf("Failed to open file %s\n", intrinsic_filename.c_str());
-		return -1;
-	}
-
-	Mat M1, D1, M2, D2;
-	fs["M1"] >> M1;
-	fs["D1"] >> D1;
-	fs["M2"] >> M2;
-	fs["D2"] >> D2;
-
-	M1 *= scale;
-	M2 *= scale;
-
-	fs.open(extrinsic_filename, FileStorage::READ);
-	if (!fs.isOpened())
-	{
-		printf("Failed to open file %s\n", extrinsic_filename.c_str());
-		return -1;
-	}
-
-	Mat R, T, R1, P1, R2, P2;
-	fs["R"] >> R;
-	fs["T"] >> T;
 
 	bm->setPreFilterCap(31);//31
 	bm->setBlockSize(SADWindowSize > 0 ? SADWindowSize : 9);
@@ -55,7 +28,6 @@ int main(int argc, char **argv)
 	int sgbmWinSize = SADWindowSize > 0 ? SADWindowSize : 3;
 	sgbm->setBlockSize(sgbmWinSize);
 
-
 	sgbm->setMinDisparity(0);
 	sgbm->setNumDisparities(numberOfDisparities);
 	sgbm->setUniquenessRatio(10);
@@ -67,22 +39,7 @@ int main(int argc, char **argv)
 	//namedWindow("disparity", 0);
 	//setMouseCallback("disparity", onMouse, 0);
 
-	Size img_size(1280,720);
-	//Size img_size=img1_raw.size();
-
-	stereoRectify(M1, D1, M2, D2, img_size, R, T, R1, R2, P1, P2, Q, CALIB_ZERO_DISPARITY, -1, img_size, &roi1, &roi2);
-
-	cout<<"roi1.size: "<<roi1.size()<<endl;
-	cout<<"roi2.size: "<<roi2.size()<<endl;
-	cout<<"matrix M1: "<<M1<<endl;
-	cout<<"matrix D1: "<<D1<<endl;
-	cout<<"matrix R1: "<<R1<<endl;
-	cout<<"matrix R2: "<<R2<<endl;
-	cout<<"matrix Q: "<<Q<<endl;
-
-	Mat map11, map12, map21, map22;
-	initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);
-	initUndistortRectifyMap(M2, D2, R2, P2, img_size, CV_16SC2, map21, map22);
+	stereo_calibrate_initialize();
 
 	while(nh.ok())
     {
@@ -93,35 +50,37 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		Mat img1_dst,img2_dst,img1r,img2r;//undistorted grey image for reconstructure
-	    cv:: cvtColor(img1_raw,img1_dst,cv::COLOR_BGR2GRAY);
-	    cv:: cvtColor(img2_raw,img2_dst,cv::COLOR_BGR2GRAY);
+		Mat img1_remap,img2_remap,img1_remap_dst,img2_remap_dst;//undistorted grey image for reconstructure
 
-		remap(img1_dst, img1r, map11, map12, INTER_LINEAR);
-		remap(img2_dst, img2r, map21, map22, INTER_LINEAR);
-		//cout<<"map11: "<<map11<<endl;
-		//cout<<"map12: "<<map11<<endl;
+		remap(img1_raw, img1_remap, map11, map12, INTER_LINEAR);
+		remap(img2_raw, img2_remap, map21, map22, INTER_LINEAR);
+
+	    cv:: cvtColor(img1_remap,img1_remap_dst,cv::COLOR_BGR2GRAY);
+	    cv:: cvtColor(img2_remap,img2_remap_dst,cv::COLOR_BGR2GRAY);
 
 		//multi object
 		vector<std::pair<int,long long>> center_l,center_r;//label and size
 
 		int64 t=getTickCount();
 
-		Mat grey0,dst0,labels0,stats0,centroids0,grey1,dst1,labels1,stats1,centroids1;
+		Mat grey0,bin0,labels0,stats0,centroids0,grey1,bin1,labels1,stats1,centroids1;
 
-		cv::GaussianBlur(img1r,grey0,Size(5,5),0,0);
-		cv::GaussianBlur(img2r,grey1,Size(5,5),0,0);
+		cv::GaussianBlur(img1_remap_dst,grey0,Size(5,5),0,0);
+		cv::GaussianBlur(img2_remap_dst,grey1,Size(5,5),0,0);
 
-		adaptiveThreshold(grey0,dst0,255,cv::ADAPTIVE_THRESH_MEAN_C,cv::THRESH_BINARY,601,-60);
-		adaptiveThreshold(grey1,dst1,255,cv::ADAPTIVE_THRESH_MEAN_C,cv::THRESH_BINARY,601,-60);
+		adaptiveThreshold(grey0,bin0,255,cv::ADAPTIVE_THRESH_MEAN_C,cv::THRESH_BINARY,601,-60);
+		adaptiveThreshold(grey1,bin1,255,cv::ADAPTIVE_THRESH_MEAN_C,cv::THRESH_BINARY,601,-60);
 
 		int nccomps0,nccomps1;
-		nccomps0=cv::connectedComponentsWithStats(dst0,labels0,stats0,centroids0);
-		nccomps1=cv::connectedComponentsWithStats(dst1,labels1,stats1,centroids1);
+		nccomps0=cv::connectedComponentsWithStats(bin0,labels0,stats0,centroids0);
+		nccomps1=cv::connectedComponentsWithStats(bin1,labels1,stats1,centroids1);
+
+		t=getTickCount()-t;
+		printf("Time elapsed by GetMultiColorBlockCenter: %fms\n",t*1000/getTickFrequency());
 
 		for(int i=1;i<stats0.rows;i++)//begin from 1 because the 0 is background
 		{
-			if(stats0.at<int>(i,4)>700&&stats0.at<int>(i,4)<70000)
+			if(stats0.at<int>(i,4)>700&&stats0.at<int>(i,4)<140000)
 			{
 				center_l.push_back(pair<int,long long>(i,stats0.at<int>(i,4)));
 				//cout<<"connected component coordinate: "<<Point(centroids0.at<double>(i,0),centroids0.at<double>(i,1))<<endl;
@@ -130,47 +89,44 @@ int main(int argc, char **argv)
 
 		for(int i=1;i<stats1.rows;i++)//begin from 1 because the first one is background
 		{
-			if(stats1.at<int>(i,4)>700&&stats1.at<int>(i,4)<70000)
+			if(stats1.at<int>(i,4)>700&&stats1.at<int>(i,4)<140000)
 			{
 				center_r.push_back(pair<int,long long>(i,stats1.at<int>(i,4)));
 			}
 		}
-
-		//center_l=GetMultiColorBlockCenter(img1r_raw, binary_left, thresh, min_area, max_area);
-		//center_r=GetMultiColorBlockCenter(img2r_raw, binary_right, thresh, min_area, max_area);
-
-		t=getTickCount()-t;
-		printf("Time elapsed by GetMultiColorBlockCenter: %fms\n",t*1000/getTickFrequency());
 		
 		std::sort(center_l.begin(),center_l.end(),[](const std::pair<int,long long>&a,const std::pair<int,long long>&b){return a.second>b.second;});//sort from bigger to smaller
 		std::sort(center_r.begin(),center_r.end(),[](const std::pair<int,long long>&a,const std::pair<int,long long>&b){return a.second>b.second;});
 
-		//imshow("left_binary", binary_left);
-		//imshow("right_binary", binary_right);
-
-		imshow("left_binary", dst0);
-		imshow("right_binary", dst1);
+		imshow("left_binary", bin0);
+		imshow("right_binary", bin1);
 
 		for(int i=0;i<center_l.size();i++)//draw the centers
 		{
-			circle(img1r,Point(centroids0.at<double>(center_l[i].first,0),centroids0.at<double>(center_l[i].first,1)),5,Scalar(0,0,0),3,8,0);///!!!
+			circle(img1_remap,Point(centroids0.at<double>(center_l[i].first,0),centroids0.at<double>(center_l[i].first,1)),5,Scalar(0,0,0),3,8,0);///!!!
 			stringstream ss;
 			ss<<i+1;
 			string str=ss.str();
-			putText(img1r,str,Point(centroids0.at<double>(center_l[i].first,0)+20,centroids0.at<double>(center_l[i].first,1)+20),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,0));
-			putText(img1r,"target",Point(centroids0.at<double>(1,0)-45,centroids0.at<double>(1,1)-20),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,0));//num_target_object
+			putText(img1_remap,str,Point(centroids0.at<double>(center_l[i].first,0)+20,centroids0.at<double>(center_l[i].first,1)+20),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,0));
+			putText(img1_remap,"target",Point(centroids0.at<double>(1,0)-45,centroids0.at<double>(1,1)-20),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,0));//num_target_object
 		}
+		circle(img1_remap,Point(gaze_point_array[29].x,gaze_point_array[29].y),5,Scalar(0,0,255),3,8,0);///!!!
 		for(int i=0;i<center_r.size();i++)
 		{
-			circle(img2r,Point(centroids1.at<double>(center_r[i].first,0),centroids1.at<double>(center_r[i].first,1)),5,Scalar(0,0,0),3,8,0);//multi object///!!!
+			circle(img2_remap,Point(centroids1.at<double>(center_r[i].first,0),centroids1.at<double>(center_r[i].first,1)),5,Scalar(0,0,0),3,8,0);//multi object///!!!
 			stringstream ss;
 			ss<<i+1;
 			string str=ss.str();
-			putText(img2r,str,Point(centroids1.at<double>(center_r[i].first,0)+20,centroids1.at<double>(center_r[i].first,1)+20),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,0));
+			putText(img2_remap,str,Point(centroids1.at<double>(center_r[i].first,0)+20,centroids1.at<double>(center_r[i].first,1)+20),FONT_HERSHEY_SIMPLEX,1,Scalar(0,0,0));
 		}
 
-		imshow("remap_left_grey", img1r);
-		imshow("remap_right_grey", img2r);
+		imshow("remap_left", img1_remap);
+		imshow("remap_right", img2_remap);
+
+		sensor_msgs::ImagePtr left_pub_msg = cv_bridge::CvImage(std_msgs::Header(),"bgr8", img1_remap).toImageMsg();
+		left_pub.publish(left_pub_msg);
+		sensor_msgs::ImagePtr right_pub_msg = cv_bridge::CvImage(std_msgs::Header(),"bgr8", img2_remap).toImageMsg();
+		right_pub.publish(right_pub_msg);
 
 		numberOfDisparities = numberOfDisparities > 0 ? numberOfDisparities : ((img_size.width / 8) + 15) & -16;
 
@@ -178,18 +134,18 @@ int main(int argc, char **argv)
 		bm->setROI2(roi2);
 		bm->setNumDisparities(numberOfDisparities);
 
-		int cn = img1r.channels();
+		int cn = img1_remap_dst.channels();
 
 		sgbm->setP1(8 * cn*sgbmWinSize*sgbmWinSize);
 		sgbm->setP2(32 * cn*sgbmWinSize*sgbmWinSize);
 
-		copyMakeBorder(img1r, img1r, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);//left border
-		copyMakeBorder(img2r, img2r, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
+		copyMakeBorder(img1_remap_dst, img1_remap_dst, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);//left border
+		copyMakeBorder(img2_remap_dst, img2_remap_dst, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
 
-		//bm->compute(img1r, img2r, disp);//comment it for real time
-		//sgbm->compute(img1r, img2r, disp);
+		//bm->compute(img1_remap_dst, img2_remap_dst, disp);//comment it for real time
+		//sgbm->compute(img1_remap_dst, img2_remap_dst, disp);
 
-		//disp = disp.colRange(numberOfDisparities, img1r.cols);
+		//disp = disp.colRange(numberOfDisparities, img1_remap_dst.cols);
 		//cout<<disp.size()<<endl;
 
 		size_t minimum=min(center_l.size(),center_r.size());//multi object
@@ -287,9 +243,7 @@ int main(int argc, char **argv)
 
 		//exit the loop if user press "Esc" key  (ASCII value of "Esc" is 27)
 		if (27 == char(c)) break;
-
     }
     return 0;
-   //ros::spin();
    //cv::destroyWindow("view");
  }

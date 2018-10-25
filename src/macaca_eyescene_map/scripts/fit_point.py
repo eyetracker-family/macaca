@@ -115,7 +115,7 @@ if __name__ == '__main__':
     left_scene_pub = rospy.Publisher('/scene/left/fit_point', ImagePoint, queue_size=1)
 
     left_image_sub = rospy.Subscriber('/scene/left/image_color', Image, imageCallback, queue_size=1)
-    left_image_pub = rospy.Publisher('/scene/left/image_gaze_point', Image, queue_size=20)#left image with gaze point
+    #left_image_pub = rospy.Publisher('/scene/left/image_gaze_point', Image, queue_size=20)#left image with gaze point
     r = rospy.Rate(30)
     calib_data_file = rospy.get_param('/fit_point/calib_data')
     while not rospy.is_shutdown():
@@ -137,9 +137,9 @@ if __name__ == '__main__':
                 lspt.x = lsx
                 lspt.y = lsy
                 left_scene_pub.publish(lspt)
-                cv2.circle(image, (int(lspt.x), int(lspt.y)), 8, (0,0,255), 8)
-                pub_imgmsg = CvBridge().cv2_to_imgmsg(image)
-                left_image_pub.publish(pub_imgmsg)
+                #cv2.circle(image, (int(lspt.x), int(lspt.y)), 8, (0,0,255), 8)
+                #pub_imgmsg = CvBridge().cv2_to_imgmsg(image)
+                #left_image_pub.publish(pub_imgmsg)
                 #cv2.imshow("image",image)
                 #cv2.waitKey(0)
                 # print(lspt)
