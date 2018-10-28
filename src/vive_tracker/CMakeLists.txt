@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf
 )
+find_package(OpenCV 3.3 REQUIRED)
 
 catkin_package(
 #  INCLUDE_DIRS include
@@ -22,7 +23,7 @@ catkin_package(
 )
 
 set(OpenVR_INCLUDE_DIRS "/home/macaca/macaca/src/vive_tracker/include/vive_tracker")
-set(OpenCV_DIR /opt/ros/kinetic/lib/x86_64-linux-gnu)
+#set(OpenCV_DIR /opt/ros/kinetic/lib/x86_64-linux-gnu)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -30,6 +31,7 @@ include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
   ${OpenVR_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 set(OpenVR_LIBS_DIRS "/home/macaca/macaca/linux64")
@@ -42,6 +44,6 @@ set(tracker_SRC
 	src/tracker.cpp )
 
 add_executable(tracker_node ${tracker_SRC})
-target_link_libraries(tracker_node ${catkin_LIBRARIES} ${LIBOPENVR})
+target_link_libraries(tracker_node ${catkin_LIBRARIES} ${LIBOPENVR} ${OpenCV_LIBS})
 
 

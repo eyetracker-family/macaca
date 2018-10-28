@@ -9,9 +9,6 @@
 #include <macaca_eyescene_map/ColorBlockConfig.h>
 
 #include <opencv2/opencv.hpp>
-#include <iostream>
-#include <stack>
-#include <algorithm>
 
 #include "opencv2/calib3d/calib3d.hpp"
 #include <opencv2/aruco.hpp>
@@ -234,7 +231,7 @@ int main(int argc, char *argv[])
   ros::init(argc, argv, "markerPoseClient");
   ros::NodeHandle nh("~");
   std::string image_topic = "/scene/left/image_color";
-  std::string output_filename = "/home/volcanoh/macaca/data/eyescene_map/ColorBlock.yml";
+  std::string output_filename = "/home/macaca/macaca/data/eyescene_map/ColorBlock.yml";
 
   std::string left_pupil_topic = "/eye/left/pupil_ellipse";
   std::string right_pupil_topic = "/eye/right/pupil_ellipse";

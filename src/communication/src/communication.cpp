@@ -42,7 +42,7 @@ void Ser_Hand_Initialize()
 {
     try 
     { 
-        ser_hand.setPort("/dev/ttyUSB0"); 
+        ser_hand.setPort("/dev/ttyUSB1"); 
         ser_hand.setBaudrate(115200); 
         serial::Timeout to = serial::Timeout::simpleTimeout(1000); 
         ser_hand.setTimeout(to); 
@@ -65,9 +65,17 @@ void Ser_Hand_Initialize()
 
 void transformPoint(const tf::TransformListener &listener)
 {
+	geometry_msgs::PointStamped pos_target,robot_pos1;
 	try
 	{
-		listener.transformPoint("lighthouse_link",ls_pos,robot_pos);//coordinate transform robot_link
+		pos_target.header.frame_id="lscene_link";
+		pos_target.header.stamp=ros::Time();
+		pos_target.point.x=0;
+		pos_target.point.y=0;
+		pos_target.point.z=0;
+
+		listener.transformPoint("robot_link",pos_target,robot_pos1);//coordinate transform robot_link
+		listener.transformPoint("robot_link",ls_pos,robot_pos);//coordinate transform robot_link
 	}
 	catch(tf::TransformException &ex)
 	{
@@ -88,10 +96,18 @@ int main (int argc, char** argv)
 
     ros::Subscriber pos_sub = nh.subscribe("scene/left/point", 1000, pos_callback); 
 
-	Ser_Arm_Initialize();
-	//Ser_Hand_Initialize();
+	//Ser_Arm_Initialize();
+	Ser_Hand_Initialize();
 
     ros::Rate loop_rate(50); 
+
+    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
+    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
+    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
+    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
+    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
+    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
+    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
 
 	tf::TransformListener tf_robot_lscene_listener;
 	ros::Timer timer=nh.createTimer(ros::Duration(1.0),boost::bind(&transformPoint,boost::ref(tf_robot_lscene_listener)));
@@ -104,20 +120,20 @@ int main (int argc, char** argv)
 
 	//data[4]=(short int)(msg->x*10)>>8;data[5]=(short int)(msg->x*10)&0xff;//x
 
-	//short int a=(short int)(robot_pos.point.x*1000*10);//plus 10 to reserve one digit after the dot.
-	short int a=2540;
+	short int a=(short int)(robot_pos.point.x*1000*10);//plus 10 to reserve one digit after the dot.
+	//short int a=1540;
 	unsigned char* temp1=(unsigned char *)&a;//temp[1] is the higher 8 digits
 	data[10]=temp1[1];data[11]=temp1[0];//x
 	//data[10]=0x06;data[11]=0x04;//x
 
-	//short int b=(short int)(robot_pos.point.y*1000*10);
-	short int b=-1630;
+	short int b=(short int)(robot_pos.point.y*1000*10);
+	//short int b=-630;
 	unsigned char* temp2=(unsigned char *)&b;
 	data[12]=temp2[1];data[13]=temp2[0];//y
 	//data[12]=0xFD;data[13]=0x89;//y
 
-	//short int c=(short int)(robot_pos.point.z*1000*10);
-	short int c=3560;
+	short int c=(short int)(robot_pos.point.z*1000*10);
+	//short int c=1560;
 	unsigned char* temp3=(unsigned char *)&c;
 	data[14]=temp3[1];data[15]=temp3[0];//z
 	//data[14]=0x06;data[15]=0x18;//z
@@ -135,10 +151,13 @@ int main (int argc, char** argv)
 	//short int res=(short int)(temp[1]<<8|temp[0]);
 	cout<<"res: "<<*res<<endl;
 
-    ROS_INFO_STREAM("Writing to serial port: " <<ls_pos.point.x<<","<<ls_pos.point.y<<","<<ls_pos.point.z); 
+    ROS_INFO_STREAM("Writing to serial port: " <<robot_pos.point.x<<","<<robot_pos.point.y<<","<<robot_pos.point.z); 
 	
-    size_t i=ser_arm.write(data,16);
-	cout<<"data sended to serial: "<<i<<endl;
+    //size_t i=ser_arm.write(data,16);
+	//cout<<"data sended to serial: "<<i<<endl;
+
+	//hand_cmd[0]=0xAA;hand_cmd[1]=0x01;hand_cmd[2]=0x04;hand_cmd[3]=0x03;hand_cmd[4]=0x55;
+	//int i=ser_hand.write(hand_cmd,5);
 
 	string arm_returned_cmd;
     while(ros::ok()) 
