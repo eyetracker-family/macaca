@@ -4,4 +4,6 @@ devel
 *.png
 *.log
 *.pkl
-
+*.weights
+*.pack
+*.h5
