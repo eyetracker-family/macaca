@@ -2,12 +2,8 @@
   <arg name="data_folder" default="/home/macaca/macaca/data/handeye/eyetracker"/>
   <arg name="rate" default="30"/>
   <node pkg="macaca_tf_setup" type="macaca_tf_setup_node" name="macaca_tf_setup" output="screen">
-    <param name="scene_left_tf_datafile" type="str" value="$(arg data_folder)/scene/left/CalibratedTransform.yml"/>
-    <param name="scene_right_tf_datafile" type="str" value="$(arg data_folder)/scene/right/CalibratedTransform.yml"/>
-    <param name="eye_left_tf_datafile" type="str" value="$(arg data_folder)/eye/left/CalibratedTransform.yml"/>
-    <param name="eye_right_tf_datafile" type="str" value="$(arg data_folder)/eye/right/CalibratedTransform.yml"/>
-    <param name="pnp2lighthouse_tf_datafile" type="str" value="$(arg data_folder)/pnp2lighthouse.yml"/>
-    <param name="tracker1_robot_tf_datafile" type="str" value="$(arg data_folder)/tracker1_robot.yml"/>
+    <param name="lscene_tracker2_tf_datafile" type="str" value="$(arg data_folder)/lscene_tracker2.yml"/>
+    <param name="tracker1_robot_tf_datafile" type="str" value="$(arg data_folder)/robot_tracker1.yml"/>
     <param name="rate" type="int" value="$(arg rate)"/>
   </node>
 </launch>

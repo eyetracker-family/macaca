@@ -4,6 +4,7 @@
 #include <ros/ros.h>
 #include <geometry_msgs/PointStamped.h>
 #include <eyetracking_msgs/ImagePoint.h>
+#include <darknet_ros_msgs/BoundingBoxes.h>
 #include <image_transport/image_transport.h>
 
 //#include <pcl/visualization/cloud_viewer.h>   
@@ -53,6 +54,11 @@ void ImagePoint_callback(const eyetracking_msgs::ImagePoint::ConstPtr& msg)
 	{
 		gaze_point_array[i]=gaze_point_array[i+1];
 	}
+} 
+
+void BoundingBox_callback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& msg) 
+{ 
+	
 } 
 
 void ImageCallback_left(const sensor_msgs::ImageConstPtr& msg)

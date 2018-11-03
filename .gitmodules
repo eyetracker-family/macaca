@@ -4,3 +4,6 @@
 [submodule "src/ar_track_alvar"]
 	path = src/ar_track_alvar
 	url = git@github.com:volcanoh/ar_track_alvar.git
+[submodule "src/darknet_ros"]
+	path = src/darknet_ros
+	url = git@github.com:jucic/darknet_ros.git

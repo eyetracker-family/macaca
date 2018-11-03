@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "image_listener");
+	ros::init(argc, argv, "reconstructure");
 	ros::NodeHandle nh;
 
 	image_transport::ImageTransport it(nh);
@@ -27,7 +27,6 @@ int main(int argc, char **argv)
 	sgbm->setPreFilterCap(63);
 	int sgbmWinSize = SADWindowSize > 0 ? SADWindowSize : 3;
 	sgbm->setBlockSize(sgbmWinSize);
-
 	sgbm->setMinDisparity(0);
 	sgbm->setNumDisparities(numberOfDisparities);
 	sgbm->setUniquenessRatio(10);

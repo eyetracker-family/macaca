@@ -44,17 +44,10 @@ bool ReadTfData(const std::string& file, tf::Transform& t) {
   return true;
 }
 
-std::string eyetracker_link = "eyetracker_link";
-std::string scene_left_camera_link = "lscene_link";///scene/left/camera_link
-std::string scene_right_camera_link = "/scene/right/camera_link";
-std::string eye_left_camera_link = "/eye/left/camera_link";
-std::string eye_right_camera_link = "/eye/right/camera_link";
+std::string tracker2_link = "tracker2_link";
+std::string lscene_link = "lscene_link";///scene/left/camera_link
 
-std::string scene_left_tf_datafile = "";
-std::string scene_right_tf_datafile = "";
-std::string eye_left_tf_datafile = "";
-std::string eye_right_tf_datafile = "";
-std::string pnp2lighthouse_tf_datafile = "";
+std::string lscene_tracker2_tf_datafile = "";
 std::string tracker1_robot_tf_datafile = "";
 
 int frame_rate = 10;
@@ -65,36 +58,17 @@ int main(int argc, char *argv[])
   ros::NodeHandle nh("~");
 
   nh.getParam("rate", frame_rate);
-  nh.getParam("scene_left_tf_datafile", scene_left_tf_datafile);
-  nh.getParam("scene_right_tf_datafile", scene_right_tf_datafile);
-  nh.getParam("eye_left_tf_datafile", eye_left_tf_datafile);
-  nh.getParam("eye_right_tf_datafile", eye_right_tf_datafile);
-  nh.getParam("pnp2lighthouse_tf_datafile", pnp2lighthouse_tf_datafile);
+  nh.getParam("lscene_tracker2_tf_datafile", lscene_tracker2_tf_datafile);
   nh.getParam("tracker1_robot_tf_datafile", tracker1_robot_tf_datafile);
 
 
   ros::Rate rate(frame_rate);
 
-  tf::Transform scene_left_tf;
-  tf::Transform scene_right_tf;
-  tf::Transform eye_left_tf;
-  tf::Transform eye_right_tf;
-  tf::Transform pnp2lighthouse_tf;
+  tf::Transform lscene_tracker2_tf;
   tf::Transform tracker1_robot_tf;
 
-  if (!ReadTfData(scene_left_tf_datafile, scene_left_tf) ) {
-    return -1;
-  }
-  if (!ReadTfData(scene_right_tf_datafile, scene_right_tf)) {
-    return -1;
-  }
-  if (!ReadTfData(eye_left_tf_datafile, eye_left_tf)) {
-    return -1;
-  }
-  if (!ReadTfData(eye_right_tf_datafile, eye_right_tf)) {
-    return -1;
-  }
-  if (!ReadTfData(pnp2lighthouse_tf_datafile, pnp2lighthouse_tf)) {
+
+  if (!ReadTfData(lscene_tracker2_tf_datafile, lscene_tracker2_tf)) {
     return -1;
   }
   if (!ReadTfData(tracker1_robot_tf_datafile, tracker1_robot_tf)) {
@@ -108,19 +82,7 @@ int main(int argc, char *argv[])
     ros::Time time = ros::Time::now();
 
     broadcaster.sendTransform(
-      tf::StampedTransform(scene_left_tf, time, eyetracker_link, scene_left_camera_link)
-      );
-    /*broadcaster.sendTransform(
-      tf::StampedTransform(scene_right_tf, time, eyetracker_link, scene_right_camera_link)
-      );
-    broadcaster.sendTransform(
-      tf::StampedTransform(eye_left_tf, time, eyetracker_link, eye_left_camera_link)
-      );
-    broadcaster.sendTransform(
-      tf::StampedTransform(eye_right_tf, time, eyetracker_link, eye_right_camera_link)
-      );*/
-    broadcaster.sendTransform(
-      tf::StampedTransform(pnp2lighthouse_tf, time, "lighthouse_link", "pnp_link")
+      tf::StampedTransform(lscene_tracker2_tf, time, tracker2_link, lscene_link)
       );
     broadcaster.sendTransform(
       tf::StampedTransform(tracker1_robot_tf, time, "tracker1_link", "robot_link")
