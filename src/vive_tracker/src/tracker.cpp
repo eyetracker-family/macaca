@@ -58,7 +58,7 @@ int main(int argc,char** argv)
 		}
 
     	double pose_tracker2[7]={0,0,0,0,0,0,0};
-    	htcViveTracker->getPoseMatrix(3, 2, pose_tracker2);
+    	htcViveTracker->getPoseMatrix(3, 0, pose_tracker2);
 
 		tf::Quaternion rotation2(pose_tracker2[1], pose_tracker2[2], pose_tracker2[3],pose_tracker2[0]);
 		tf::Vector3 origin2(pose_tracker2[4], pose_tracker2[5], pose_tracker2[6]);
@@ -66,11 +66,12 @@ int main(int argc,char** argv)
 		if (!isnan(rotation2.x()) && !isnan(rotation2.y())&& !isnan(rotation2.z()) && !isnan(rotation2.w()) && std::abs(origin2.x()) < 5 && std::abs(origin2.y()) < 5 && abs(origin2.z()) < 5 ) {
 		  tf::Transform t2(rotation2, origin2);
 		  tf::StampedTransform Tracker2ToLighthouse(t2, ros::Time::now(),"lighthouse_link","tracker2_link");
+			//"tracker2_link"-->"lighthouse_link" c++ is different from python!!!
 		  tf_broadcaster->sendTransform(Tracker2ToLighthouse);
 		}
 
     	double pose_tracker3[7]={0,0,0,0,0,0,0};
-    	htcViveTracker->getPoseMatrix(3, 0, pose_tracker3);
+    	htcViveTracker->getPoseMatrix(3, 2, pose_tracker3);
 
 		tf::Quaternion rotation3(pose_tracker3[1], pose_tracker3[2], pose_tracker3[3],pose_tracker3[0]);
 		tf::Vector3 origin3(pose_tracker3[4], pose_tracker3[5], pose_tracker3[6]);

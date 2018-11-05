@@ -96,8 +96,8 @@ int main (int argc, char** argv)
 
     ros::Subscriber pos_sub = nh.subscribe("scene/left/point", 1000, pos_callback); 
 
-	//Ser_Arm_Initialize();
-	Ser_Hand_Initialize();
+	Ser_Arm_Initialize();
+	//Ser_Hand_Initialize();
 
     ros::Rate loop_rate(50); 
 

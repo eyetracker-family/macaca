@@ -9,7 +9,7 @@
 
 //#include <pcl/visualization/cloud_viewer.h>   
 //#include <pcl/io/io.h>  
-//#include <pcl/io/pcd_io.h>  
+//#include <pcl/io/pcd_io.h>
 
 //#include <pcl/io/pcd_io.h>
 //#include <pcl/point_types.h>
@@ -45,6 +45,14 @@ Mat disp(720,1280,CV_16SC1), disp8;
 
 cv::Mat img1_raw,img2_raw;
 
+struct detected_object
+{
+	string classname;
+	double probability;
+	Rect2i bounding_box;
+};
+vector<detected_object> detected_object_array;
+
 void ImagePoint_callback(const eyetracking_msgs::ImagePoint::ConstPtr& msg) 
 { 
     ROS_INFO_STREAM("gaze_point: " <<msg->x<<","<<msg->y); 
@@ -58,7 +66,18 @@ void ImagePoint_callback(const eyetracking_msgs::ImagePoint::ConstPtr& msg)
 
 void BoundingBox_callback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& msg) 
 { 
-	
+	int num=sizeof(msg->bounding_boxes)/(sizeof(string)+8+4*8);
+	for(int i=0;i<num;i++)
+	{
+		if(msg->bounding_boxes[i].Class=="bottle")
+		{
+			detected_object temp;
+			temp.classname=msg->bounding_boxes[i].Class;
+			temp.probability=msg->bounding_boxes[i].probability;
+			temp.bounding_box=Rect2i(msg->bounding_boxes[i].xmin,msg->bounding_boxes[i].ymin,msg->bounding_boxes[i].xmax-msg->bounding_boxes[i].xmin,msg->bounding_boxes[i].ymax-msg->bounding_boxes[i].ymin);//tl_x,tl_y,width,height
+			detected_object_array.push_back(temp);
+		}
+	}
 } 
 
 void ImageCallback_left(const sensor_msgs::ImageConstPtr& msg)

@@ -299,9 +299,9 @@ HmdQuaternion_t LighthouseTracking::GetRotation(HmdMatrix34_t matrix)
     if( tr > 0 ) {
       double s = 0.5f / sqrtf(tr+ 1.0f);
       q.w = 0.25f / s;
-      q.x = ( matrix.m[2][1] - matrix.m[1][2] ) * s;
-      q.y = ( matrix.m[0][2] - matrix.m[2][0] ) * s;
-      q.z = ( matrix.m[1][0] - matrix.m[0][1] ) * s;
+      q.x = ( matrix.m[2][1] - matrix.m[1][2] ) / s;
+      q.y = ( matrix.m[0][2] - matrix.m[2][0] ) / s;
+      q.z = ( matrix.m[1][0] - matrix.m[0][1] ) / s;
     } else {
       if ( matrix.m[0][0] > matrix.m[1][1] && matrix.m[0][0] > matrix.m[2][2] ) {
         double s = 2.0f * sqrtf( 1.0f + matrix.m[0][0] - matrix.m[1][1] - matrix.m[2][2]);
@@ -656,7 +656,7 @@ void LighthouseTracking::getPoseMatrix(int deviceClass, int deviceId,double pose
         TrackedDevicePose_t trackedDevicePose;
         HmdVector3_t position;
         HmdQuaternion_t rot;
-        vr_pointer->GetDeviceToAbsoluteTrackingPose(TrackingUniverseRawAndUncalibrated, 0, &trackedDevicePose, 1);
+        vr_pointer->GetDeviceToAbsoluteTrackingPose(TrackingUniverseStanding, 0, &trackedDevicePose, 1);
         position = GetPosition(trackedDevicePose.mDeviceToAbsoluteTracking);
         rot = GetRotation(trackedDevicePose.mDeviceToAbsoluteTracking);
 		pose[0]=rot.w;        
@@ -681,7 +681,7 @@ void LighthouseTracking::getPoseMatrix(int deviceClass, int deviceId,double pose
                 pC->hand </*=  Allow printing coordinates for invalid hand? Yes.*/ 0)
             return;
 
-        vr_pointer->GetControllerStateWithPose(TrackingUniverseRawAndUncalibrated, pC->deviceId, &controllerState, sizeof(controllerState), &trackedDevicePose);
+        vr_pointer->GetControllerStateWithPose(TrackingUniverseStanding, pC->deviceId, &controllerState, sizeof(controllerState), &trackedDevicePose);
         pC->pos = GetPosition(trackedDevicePose.mDeviceToAbsoluteTracking);
         rot = GetRotation(trackedDevicePose.mDeviceToAbsoluteTracking);
         //std::cout<<rot.w<<" "<<rot.x<<" "<<rot.y<<" "<<rot.z<<std::endl;
@@ -707,7 +707,7 @@ void LighthouseTracking::getPoseMatrix(int deviceClass, int deviceId,double pose
                 !vr_pointer->IsTrackedDeviceConnected(pT->deviceId) )
             return;
 
-        vr_pointer->GetControllerStateWithPose(TrackingUniverseRawAndUncalibrated, pT->deviceId, &controllerState, sizeof(controllerState), &trackedDevicePose);
+        vr_pointer->GetControllerStateWithPose(TrackingUniverseStanding, pT->deviceId, &controllerState, sizeof(controllerState), &trackedDevicePose);
         pT->pos = GetPosition(trackedDevicePose.mDeviceToAbsoluteTracking);
         rot = GetRotation(trackedDevicePose.mDeviceToAbsoluteTracking);
 		pose[0]=rot.w;        
@@ -719,3 +719,5 @@ void LighthouseTracking::getPoseMatrix(int deviceClass, int deviceId,double pose
         pose[6]=pT->pos.v[2];
     }
 }
+
+
