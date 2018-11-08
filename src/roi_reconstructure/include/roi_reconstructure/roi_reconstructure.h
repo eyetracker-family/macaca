@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 
@@ -6,6 +8,8 @@
 #include <eyetracking_msgs/ImagePoint.h>
 #include <darknet_ros_msgs/BoundingBoxes.h>
 #include <image_transport/image_transport.h>
+
+#include <opencv2/tracking.hpp>
 
 //#include <pcl/visualization/cloud_viewer.h>   
 //#include <pcl/io/io.h>  
@@ -29,9 +33,10 @@ Mat xyz;
 std::string intrinsic_filename = "/home/macaca/macaca/data/reconstruction/intrinsics.yml";
 std::string extrinsic_filename = "/home/macaca/macaca/data/reconstruction/extrinsics.yml";
 
-int SADWindowSize=5, numberOfDisparities=256;//15,32//better:5,256//
+int SADWindowSize=7, numberOfDisparities=256;//15,32//better:5,256//
 float scale=1;
 
+//Ptr<StereoBM> bm = StereoBM::create(16, 9);//originally from reconstructure.h
 Ptr<StereoBM> bm = StereoBM::create(16, 9);//originally from reconstructure.h
 Ptr<StereoSGBM> sgbm = StereoSGBM::create(0, 16, 3);
 
@@ -53,6 +58,12 @@ struct detected_object
 };
 vector<detected_object> detected_object_array;
 
+Rect tracking_box;
+Rect2d tracked_box(0,0,0,0);
+
+//Ptr<Tracker> tracker=Tracker::create("MIL");
+Ptr<TrackerKCF> tracker = TrackerKCF::create();//KCF:loss and found, MedianFlow:become bigger//loss:MIL,Boosting  slow:TLD,error:GOTURN
+
 void ImagePoint_callback(const eyetracking_msgs::ImagePoint::ConstPtr& msg) 
 { 
     ROS_INFO_STREAM("gaze_point: " <<msg->x<<","<<msg->y); 
@@ -65,20 +76,30 @@ void ImagePoint_callback(const eyetracking_msgs::ImagePoint::ConstPtr& msg)
 } 
 
 void BoundingBox_callback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& msg) 
-{ 
-	int num=sizeof(msg->bounding_boxes)/(sizeof(string)+8+4*8);
+{
+	int num=msg->bounding_boxes.size();
+	cout<<"num of bounding_box: "<<num<<endl;
+	detected_object_array.clear();
+	static bool bounding_box_record=true;//record the first detected bounding_box for tracking
 	for(int i=0;i<num;i++)
 	{
-		if(msg->bounding_boxes[i].Class=="bottle")
+		if(msg->bounding_boxes[i].Class=="sports ball")
 		{
 			detected_object temp;
 			temp.classname=msg->bounding_boxes[i].Class;
 			temp.probability=msg->bounding_boxes[i].probability;
 			temp.bounding_box=Rect2i(msg->bounding_boxes[i].xmin,msg->bounding_boxes[i].ymin,msg->bounding_boxes[i].xmax-msg->bounding_boxes[i].xmin,msg->bounding_boxes[i].ymax-msg->bounding_boxes[i].ymin);//tl_x,tl_y,width,height
 			detected_object_array.push_back(temp);
+			cout<<"sports ball detected"<<endl;
+
+			if(bounding_box_record)
+			{
+				tracking_box=temp.bounding_box;
+				bounding_box_record=false;
+			}
 		}
 	}
-} 
+}
 
 void ImageCallback_left(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -174,63 +195,5 @@ void stereo_calibrate_initialize()
 
 	initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);
 	initUndistortRectifyMap(M2, D2, R2, P2, img_size, CV_16SC2, map21, map22);
-}
-
-geometry_msgs::Point FindClosestObject(vector<pair<Point2d,Point3d> > center_position_array,Point2d gaze_point)
-{
-	int order=0;
-	double min_distance=200000000;
-	for(int i=0;i<center_position_array.size();i++)
-	{
-		double x=center_position_array[i].first.x,y=center_position_array[i].first.y;
-		double distance=sqrt((x-gaze_point.x)*(x-gaze_point.x)+(y-gaze_point.y)*(y-gaze_point.y));
-		if(distance<min_distance)
-		{
-			min_distance=distance;
-			order=i;
-		}
-	}
-	geometry_msgs::Point point;
-	point.x=center_position_array[order].second.x;
-	point.y=center_position_array[order].second.y;
-	point.z=center_position_array[order].second.z;
-	return point;
-}
-geometry_msgs::PointStamped Find_Target_Object(vector<pair<int,Point3d> > label_position_array,Point2d (&gaze_point_array)[30],Mat label,int nccomps,int &num_target_object)
-{
-	geometry_msgs::PointStamped pos_target;
-	pos_target.point.x=pos_target.point.y=pos_target.point.z=0;
-	vector<int> count(nccomps,0);
-	for(int i=0;i<30;i++)
-	{
-		if(gaze_point_array[i].x>1&&gaze_point_array[i].y>1)//remove the effect of (0,0)
-		{
-			int index=label.at<int>(gaze_point_array[i].y,gaze_point_array[i].x);
-			count[index]++;
-		}
-	}
-	/*for(int i=1;i<count.size();i++)//0 is the background
-	{
-		if(count[i]>15)//condition
-		{
-			for(int j=0;j<label_position_array.size();j++)
-			{
-				if(label_position_array[j].first==i)
-				{
-					num_target_object=i;
-					pos_target.x=label_position_array[j].second.x;
-					pos_target.y=label_position_array[j].second.y;
-					pos_target.z=label_position_array[j].second.z;
-				}
-			}
-		}
-	}*/
-	num_target_object=1;
-	pos_target.header.frame_id="lscene_link";
-	pos_target.header.stamp=ros::Time();
-	pos_target.point.x=label_position_array[0].second.x/1000;
-	pos_target.point.y=label_position_array[0].second.y/1000;
-	pos_target.point.z=label_position_array[0].second.z/1000;
-	return pos_target;
 }
 
