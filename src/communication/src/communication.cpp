@@ -17,7 +17,7 @@ void Ser_Arm_Initialize()
 {
     try 
     { 
-        ser_arm.setPort("/dev/ttyUSB0"); 
+        ser_arm.setPort("/dev/ttyUSB1"); 
         ser_arm.setBaudrate(115200); 
         serial::Timeout to = serial::Timeout::simpleTimeout(1000); 
         ser_arm.setTimeout(to); 
@@ -81,7 +81,8 @@ void transformPoint(const tf::TransformListener &listener)
 	{
 		ROS_ERROR("exception aroused while coordinate transform!!!");
 	}
-	cout<<"robot_pos: "<<endl<<robot_pos<<endl;
+	cout<<"lscene in robot: "<<endl<<robot_pos1<<endl;
+	cout<<"ball in robot: "<<endl<<robot_pos<<endl;
 }
 
 void pos_callback(const geometry_msgs::PointStamped::ConstPtr& msg) 
@@ -101,16 +102,12 @@ int main (int argc, char** argv)
 
     ros::Rate loop_rate(50); 
 
-    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
-    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
-    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
-    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
-    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
-    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
-    ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); ros::spinOnce(); 
-
 	tf::TransformListener tf_robot_lscene_listener;
 	ros::Timer timer=nh.createTimer(ros::Duration(1.0),boost::bind(&transformPoint,boost::ref(tf_robot_lscene_listener)));
+
+	while(robot_pos.point.x==0)
+    	ros::spinOnce();
+
 
 	data[0]=0x55;data[1]=0x01;data[2]=0x01;data[3]=0x0C;//header
 
@@ -153,8 +150,8 @@ int main (int argc, char** argv)
 
     ROS_INFO_STREAM("Writing to serial port: " <<robot_pos.point.x<<","<<robot_pos.point.y<<","<<robot_pos.point.z); 
 	
-    //size_t i=ser_arm.write(data,16);
-	//cout<<"data sended to serial: "<<i<<endl;
+    size_t i=ser_arm.write(data,16);
+	cout<<"data sended to serial: "<<i<<endl;
 
 	//hand_cmd[0]=0xAA;hand_cmd[1]=0x01;hand_cmd[2]=0x04;hand_cmd[3]=0x03;hand_cmd[4]=0x55;
 	//int i=ser_hand.write(hand_cmd,5);

@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 	    cv:: cvtColor(img1_remap,img1_remap_dst,cv::COLOR_BGR2GRAY);
 	    cv:: cvtColor(img2_remap,img2_remap_dst,cv::COLOR_BGR2GRAY);
 
-		//numberOfDisparities = numberOfDisparities > 0 ? numberOfDisparities : ((img_size.width / 8) + 15) & -16;
+		numberOfDisparities = numberOfDisparities > 0 ? numberOfDisparities : ((img_size.width / 8) + 15) & -16;
 
 		bm->setROI1(roi1);
 		bm->setROI2(roi2);
@@ -75,15 +75,15 @@ int main(int argc, char **argv)
 
 		//copyMakeBorder(img1_remap_dst, img1_remap_dst, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);//left border
 		//copyMakeBorder(img2_remap_dst, img2_remap_dst, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
-        imshow("img1_remap_dst",img1_remap_dst);
-        imshow("img2_remap_dst", img2_remap_dst);
-        cout<<img1_remap_dst.cols<<endl;
+        //imshow("img1_remap_dst",img1_remap_dst);
+        //imshow("img2_remap_dst", img2_remap_dst);
+        //cout<<img1_remap_dst.cols<<endl;
 		int64 t=getTickCount();
 		bm->compute(img1_remap_dst, img2_remap_dst, disp);//comment it for real time
         //imshow("disp",disp);
 		//sgbm->compute(img1_remap_dst, img2_remap_dst, disp);
 		t=getTickCount()-t;
-		printf("Time elapsed by sgbm: %fms\n",t*1000/getTickFrequency());
+		printf("Time elapsed by bm: %fms\n",t*1000/getTickFrequency());
 
 		//disp = disp.colRange(numberOfDisparities, img1_remap_dst.cols);
 
@@ -92,33 +92,77 @@ int main(int argc, char **argv)
 		reprojectImageTo3D(disp, xyz, Q, true);
 		xyz = xyz * 16;
 
-		/*if(detected_object_array.size()>0)
+		cout<<"tracking_box: "<<tracking_box<<endl;
+		static bool tracking_init_flag=false;
+		if(tracking_box.height!=0)
 		{
-			cout<<"bounding_box: "<<endl<<detected_object_array[0].bounding_box<<endl;
+			if(tracking_init_flag)
+				cv_tracker->clear();
+			cv_tracker = TrackerKCF::create();
+			//if(tracking_init_flag)
+			//{
+				cout<<"tracking_box.height: "<<tracking_box.height<<endl;
+				cv_tracker->init(img1_remap,tracking_box);
+				tracking_init_flag=true;
+			//}
+		}
+		if(tracking_init_flag)
+		{
+			cv_tracker->update(img1_remap,tracked_box);
+			rectangle(img1_remap,tracked_box,Scalar(255,0,0),2,1);
+			imshow("Tracking",img1_remap);
+		}
+
+		/*if(tracking_box.height!=0)
+		{
+			//if(tracking_init_flag)
+			{
+				dlib::cv_image<dlib::rgb_pixel> dlib_img_init(img1_remap); 
+				dlib_tracker.start_track(dlib_img_init, openCVRectToDlib(tracking_box));
+				tracking_init_flag=false;
+			}
+			dlib::cv_image<dlib::rgb_pixel> dlib_img(img1_remap); 
+			double rate=dlib_tracker.update(dlib_img);
+			cout<<"rate: "<<rate<<endl;
+			tracked_box=dlibRectangleToOpenCV(dlib_tracker.get_position());
+			rectangle(img1_remap,tracked_box,Scalar(255,0,0),2,1);
+			imshow("Tracking",img1_remap);
+		}*/
+
+		geometry_msgs::PointStamped pos;
+		long long sumx=0,sumy=0,sumz=0,count=0;
+		if(detected_object_array.size()>0)
+		{
+			//cout<<"bounding_box: "<<detected_object_array[0].bounding_box<<endl;
 			for(int y=0;y<disp8.rows;y++)
 				for(int x=0;x<disp8.cols;x++)
 				{
-					if(!detected_object_array[0].bounding_box.contains(Point2i(y,x)))
-						disp8.at<char>(y,x)=0;
+					if(tracked_box.contains(Point2i(x,y))&&xyz.at<Vec3f>(y,x)[2]<1000)
+					{
+						sumx+=xyz.at<Vec3f>(y,x)[0];
+						sumy+=xyz.at<Vec3f>(y,x)[1];
+						sumz+=xyz.at<Vec3f>(y,x)[2];
+						count++;
+						//cout<<"xyz: "<<xyz.at<Vec3f>(y,x)<<endl;
+					}
+						//disp8.at<char>(y,x)=0;
 				}
-		}*/
+		}
+
+		if(count!=0)
+		{
+			pos.header.frame_id="lscene_link";
+			pos.header.stamp=ros::Time();
+			pos.point.x=(sumx/(count))/1000.;
+			pos.point.y=(sumy/(count))/1000.;
+			pos.point.z=(sumz/(count))/1000.+0.02;
+			pos_pub.publish(pos);
+			cout<<"pos: "<<endl<<pos<<endl;
+		}
 
 		if(detected_object_array.size()>0)
 		{
-			rectangle(disp8,detected_object_array[0].bounding_box,255,3,8,0);
-		}
-		cout<<"tracking_box: "<<tracking_box<<endl;
-		static bool flag=true;
-		if(tracking_box.height!=0)
-		{
-			if(flag)
-			{
-				tracker->init(img1_remap,tracking_box);
-				flag=false;
-			}
-			tracker->update(img1_remap,tracked_box);
-			rectangle(img1_remap,tracked_box,Scalar(255,0,0),2,1);
-			imshow("Tracking",img1_remap);
+			rectangle(disp8,tracked_box,255,3,8,0);
 		}
 
 		imshow("disparity", disp8);

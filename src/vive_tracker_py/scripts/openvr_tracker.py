@@ -19,17 +19,17 @@ br=tf.TransformBroadcaster()
 while not rospy.is_shutdown():
     r.sleep()
 
-    pose1=v.devices["tracker_2"].get_pose_rotationMatrix()
+    pose1=v.devices["tracker_3"].get_pose_rotationMatrix()
     pose_mat_np1=np.reshape(pose1,[4,4])
     br.sendTransform((pose1[3],pose1[7],pose1[11]),tf.transformations.quaternion_from_matrix(pose_mat_np1),rospy.Time.now(),"tracker0_link","lighthouse_link")#"tracker1_link"-->"lighthouse_link" c++ is different from python!!!
 
-    pose2=v.devices["tracker_3"].get_pose_rotationMatrix()
+    pose2=v.devices["tracker_2"].get_pose_rotationMatrix()
     pose_mat_np2=np.reshape(pose2,[4,4])
     br.sendTransform((pose2[3],pose2[7],pose2[11]),tf.transformations.quaternion_from_matrix(pose_mat_np2),rospy.Time.now(),"tracker1_link","lighthouse_link")
 
     pose3=v.devices["tracker_1"].get_pose_rotationMatrix()
     pose_mat_np3=np.reshape(pose3,[4,4])
-    br.sendTransform((pose3[3],pose3[7],pose3[11]),tf.transformations.quaternion_from_matrix(pose_mat_np3),rospy.Time.now(),"tracker2_link","lighthouse_link")
+    br.sendTransform((pose3[2],pose3[7],pose3[11]),tf.transformations.quaternion_from_matrix(pose_mat_np3),rospy.Time.now(),"tracker2_link","lighthouse_link")
 
     '''txt1 = ""
     pose1=v.devices["tracker_1"].get_pose_quaternion()

@@ -11,6 +11,12 @@
 
 #include <opencv2/tracking.hpp>
 
+#include <dlib/image_processing.h>
+#include <dlib/gui_widgets.h>
+#include <dlib/image_io.h>
+#include <dlib/dir_nav.h>
+#include <dlib/opencv.h>
+
 //#include <pcl/visualization/cloud_viewer.h>   
 //#include <pcl/io/io.h>  
 //#include <pcl/io/pcd_io.h>
@@ -62,7 +68,9 @@ Rect tracking_box;
 Rect2d tracked_box(0,0,0,0);
 
 //Ptr<Tracker> tracker=Tracker::create("MIL");
-Ptr<TrackerKCF> tracker = TrackerKCF::create();//KCF:loss and found, MedianFlow:become bigger//loss:MIL,Boosting  slow:TLD,error:GOTURN
+Ptr<TrackerKCF> cv_tracker;// = TrackerKCF::create();//KCF:loss and found, MedianFlow:become bigger//loss:MIL,Boosting  slow:TLD,error:GOTURN
+
+dlib::correlation_tracker dlib_tracker;//dlib tracker
 
 void ImagePoint_callback(const eyetracking_msgs::ImagePoint::ConstPtr& msg) 
 { 
@@ -78,7 +86,7 @@ void ImagePoint_callback(const eyetracking_msgs::ImagePoint::ConstPtr& msg)
 void BoundingBox_callback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& msg) 
 {
 	int num=msg->bounding_boxes.size();
-	cout<<"num of bounding_box: "<<num<<endl;
+	//cout<<"num of bounding_box: "<<num<<endl;
 	detected_object_array.clear();
 	static bool bounding_box_record=true;//record the first detected bounding_box for tracking
 	for(int i=0;i<num;i++)
@@ -90,9 +98,9 @@ void BoundingBox_callback(const darknet_ros_msgs::BoundingBoxes::ConstPtr& msg)
 			temp.probability=msg->bounding_boxes[i].probability;
 			temp.bounding_box=Rect2i(msg->bounding_boxes[i].xmin,msg->bounding_boxes[i].ymin,msg->bounding_boxes[i].xmax-msg->bounding_boxes[i].xmin,msg->bounding_boxes[i].ymax-msg->bounding_boxes[i].ymin);//tl_x,tl_y,width,height
 			detected_object_array.push_back(temp);
-			cout<<"sports ball detected"<<endl;
+			//cout<<"sports ball detected"<<endl;
 
-			if(bounding_box_record)
+			//if(bounding_box_record)
 			{
 				tracking_box=temp.bounding_box;
 				bounding_box_record=false;
@@ -126,6 +134,15 @@ void ImageCallback_right(const sensor_msgs::ImageConstPtr& msg)
     {
         ROS_ERROR("couldn't convert fron '%s' to 'bgr8'.",msg->encoding.c_str());
     }
+}
+
+static cv::Rect dlibRectangleToOpenCV(dlib::rectangle r)
+{//https://stackoverflow.com/questions/34871740/convert-opencvs-rect-to-dlibs-rectangle
+  return cv::Rect(cv::Point2i(r.left(), r.top()), cv::Point2i(r.right() + 1, r.bottom() + 1));
+}
+static dlib::rectangle openCVRectToDlib(cv::Rect r)
+{
+  return dlib::rectangle((long)r.tl().x, (long)r.tl().y, (long)r.br().x - 1, (long)r.br().y - 1);
 }
 
 static void onMouse(int event, int x, int y, int, void*)
@@ -195,5 +212,9 @@ void stereo_calibrate_initialize()
 
 	initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);
 	initUndistortRectifyMap(M2, D2, R2, P2, img_size, CV_16SC2, map21, map22);
+	Point2d dst(map11.at<short>(400,400),map12.at<short>(400,400));
+	
+	cout<<"map11.size: "<<dst<<endl;
+
 }
 

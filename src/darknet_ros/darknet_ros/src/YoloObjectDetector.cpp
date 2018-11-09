@@ -194,9 +194,11 @@ void YoloObjectDetector::cameraCallback(const sensor_msgs::ImageConstPtr& msg)
 
   if (cam_image) {
     {
+      //here
       boost::unique_lock<boost::shared_mutex> lockImageCallback(mutexImageCallback_);
       imageHeader_ = msg->header;
       camImageCopy_ = cam_image->image.clone();
+	  remap(camImageCopy_, camImageCopy_, map11, map12, INTER_LINEAR);
     }
     {
       boost::unique_lock<boost::shared_mutex> lockImageStatus(mutexImageStatus_);

@@ -32,6 +32,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 #include <cv_bridge/cv_bridge.h>
+#include <opencv2/opencv.hpp>
 
 // darknet_ros_msgs
 #include <darknet_ros_msgs/BoundingBoxes.h>
@@ -57,9 +58,65 @@ extern "C" {
 #include <sys/time.h>
 }
 
+using namespace std;
+using namespace cv;
+
 extern "C" void ipl_into_image(IplImage* src, image im);
 extern "C" image ipl_to_image(IplImage* src);
 extern "C" void show_image_cv(image p, const char *name, IplImage *disp);
+
+
+Mat img1, img2;
+Mat map11, map12;
+Size img_size(1280,720);
+
+Rect roi1, roi2;
+Mat Q;
+float scale=1;
+
+std::string intrinsic_filename = "/home/macaca/macaca/data/reconstruction/intrinsics.yml";
+std::string extrinsic_filename = "/home/macaca/macaca/data/reconstruction/extrinsics.yml";
+
+void stereo_calibrate_initialize()
+{
+	FileStorage fs(intrinsic_filename, FileStorage::READ);
+	if (!fs.isOpened())
+	{
+		printf("Failed to open file %s\n", intrinsic_filename.c_str());
+		return;
+	}
+
+	Mat M1, D1, M2, D2;
+	fs["M1"] >> M1;
+	fs["D1"] >> D1;
+	fs["M2"] >> M2;
+	fs["D2"] >> D2;
+
+	M1 *= scale;
+	M2 *= scale;
+
+	fs.open(extrinsic_filename, FileStorage::READ);
+	if (!fs.isOpened())
+	{
+		printf("Failed to open file %s\n", extrinsic_filename.c_str());
+		return;
+	}
+
+	Mat R, T, R1, P1, R2, P2;
+	fs["R"] >> R;
+	fs["T"] >> T;
+
+	stereoRectify(M1, D1, M2, D2, img_size, R, T, R1, R2, P1, P2, Q, CALIB_ZERO_DISPARITY, -1, img_size, &roi1, &roi2);
+	cout<<"roi1.size: "<<roi1.size()<<endl;
+	cout<<"roi2.size: "<<roi2.size()<<endl;
+	cout<<"matrix M1: "<<M1<<endl;
+	cout<<"matrix D1: "<<D1<<endl;
+	cout<<"matrix R1: "<<R1<<endl;
+	cout<<"matrix R2: "<<R2<<endl;
+	cout<<"matrix Q: "<<Q<<endl;
+
+	initUndistortRectifyMap(M1, D1, R1, P1, img_size, CV_16SC2, map11, map12);
+}
 
 namespace darknet_ros {
 

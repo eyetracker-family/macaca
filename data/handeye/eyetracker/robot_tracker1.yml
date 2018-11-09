@@ -8,4 +8,4 @@ ArmTipToMarkerTagTransform: !!opencv-matrix
        -1., 0.,
        0., -1.13e-01,
        0., 1.,
-       0., -1.12e-01, 0., 0., 0., 1. ]
+       0., -1.22e-01, 0., 0., 0., 1. ]

@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
 )
 
+add_subdirectory(/home/macaca/github/dlib/dlib dlib_build)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 ## System dependencies are found with CMake's conventions
 find_package(OpenCV 3.3 REQUIRED)
@@ -42,6 +44,7 @@ include_directories(
 add_executable(roi_reconstructure_node src/roi_reconstructure.cpp)
 link_directories(${OpenCV_LIB_DIR})
 target_link_libraries(roi_reconstructure_node
+	dlib::dlib
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
  ${PCL_LIBRARIES}
