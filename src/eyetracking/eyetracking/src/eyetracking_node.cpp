@@ -1,3 +1,8 @@
+#include "algo.h"
+#include "ElSe.h"
+#include "ExCuSe.h"
+#include "PuRe.h"
+
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <opencv2/opencv.hpp>
@@ -10,6 +15,9 @@
 #include <dynamic_reconfigure/server.h>
 
 #include <eyetracking_msgs/RotatedRect.h>
+
+using namespace cv;
+using namespace std;
 
 cv_bridge::CvImagePtr cv_ptr_;
 cv::Mat image_;
@@ -28,32 +36,67 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg) {
   try {
     cv_ptr_ = cv_bridge::toCvCopy(msg, "bgr8");
     image_ = cv_ptr_->image;
-    int size_times = image_.cols / 320; 
-    cv::resize(image_, image_, cv::Size(320, image_.rows / size_times));
+		if (image_.empty())
+		{
+			cout << "no image" << endl;
+		}
 
-    try {
-      pupiltracker::findPupilEllipse_out out;
-      pupiltracker::tracker_log log;
-      pupiltracker::findPupilEllipse(params, image_, out, log);
+	if(!image_.empty())
+	{
+		cv::cvtColor(image_, image_, cv::COLOR_BGR2GRAY);
+		int size_times = image_.cols / 320; 
+		cv::resize(image_, image_, cv::Size(320, image_.rows / size_times));
 
-      pupiltracker::cvx::cross(image_, out.pPupil, 5, pupiltracker::cvx::rgb(255, 255, 0));
-      cv::ellipse(image_, out.elPupil, pupiltracker::cvx::rgb(255,0,255));
+		try {
+		  /*pupiltracker::findPupilEllipse_out out;
+		  pupiltracker::tracker_log log;
+		  pupiltracker::findPupilEllipse(params, image_, out, log);
 
-      pupil_ellipse_msg.header = msg->header;
-      pupil_ellipse_msg.x = out.elPupil.center.x * size_times;
-      pupil_ellipse_msg.y = out.elPupil.center.y * size_times;
-      pupil_ellipse_msg.angle = out.elPupil.angle;
-      pupil_ellipse_msg.width = out.elPupil.size.width * size_times;
-      pupil_ellipse_msg.height = out.elPupil.size.height * size_times;
-      pupil_pub_.publish(pupil_ellipse_msg);
+		  pupiltracker::cvx::cross(image_, out.pPupil, 5, pupiltracker::cvx::rgb(255, 255, 0));
+		  cv::ellipse(image_, out.elPupil, pupiltracker::cvx::rgb(255,0,255));
 
-      sensor_msgs::ImagePtr pub_msg = cv_bridge::CvImage(msg->header, "bgr8", image_).toImageMsg();
-      image_pub_.publish(pub_msg);
+		  pupil_ellipse_msg.header = msg->header;
+		  pupil_ellipse_msg.x = out.elPupil.center.x * size_times;
+		  pupil_ellipse_msg.y = out.elPupil.center.y * size_times;
+		  pupil_ellipse_msg.angle = out.elPupil.angle;
+		  pupil_ellipse_msg.width = out.elPupil.size.width * size_times;
+		  pupil_ellipse_msg.height = out.elPupil.size.height * size_times;*/
 
-    }
-    catch (cv::Exception e) {
-      ROS_ERROR("Pupil Algorithm Error!");
-    }
+		  //cv::RotatedRect pupil = ELSE::run(image_);
+		  //RotatedRect pupil = ELSE::run(grey);//algo
+		  //RotatedRect pupil = ElSe().run(grey);
+		  //RotatedRect pupil = ExCuSe().run(grey);
+		  RotatedRect pupil = PuRe().run(image_);
+		  cv::cvtColor(image_, image_, cv::COLOR_GRAY2BGR);
+
+		  if(pupil.size.height>20)
+		  {
+
+			  pupiltracker::cvx::cross(image_, cv::Point2f(pupil.center.x,pupil.center.y), 5, pupiltracker::cvx::rgb(255, 255, 0));
+			  cv::ellipse(image_, pupil, pupiltracker::cvx::rgb(255,0,255));
+
+			  cv::imshow("pupil",image_);
+			  cv::waitKey(1);
+
+			  pupil_ellipse_msg.header = msg->header;
+			  pupil_ellipse_msg.x = pupil.center.x * size_times;
+			  pupil_ellipse_msg.y = pupil.center.y * size_times;
+			  pupil_ellipse_msg.angle = pupil.angle;
+			  pupil_ellipse_msg.width = pupil.size.width * size_times;
+			  pupil_ellipse_msg.height = pupil.size.height * size_times;
+		  }
+
+		  pupil_pub_.publish(pupil_ellipse_msg);
+
+		  sensor_msgs::ImagePtr pub_msg = cv_bridge::CvImage(msg->header, "bgr8", image_).toImageMsg();
+		  image_pub_.publish(pub_msg);
+
+		}
+		catch (cv::Exception e) 
+		{
+		  ROS_ERROR("Pupil Algorithm Error!");
+		}
+	}
   }
   catch (cv_bridge::Exception& e) {
     ROS_ERROR("Could not convert from '%s' to 'rgb8'.", msg->encoding.c_str());
@@ -118,7 +161,8 @@ int main(int argc, char *argv[])
   pupil_pub_ = nh.advertise<eyetracking_msgs::RotatedRect>(output_topic_, 10);
 
   image_transport::ImageTransport it(nh);
-  image_sub_ = it.subscribe("image_rect_color", 1, imageCallback);
+  //image_sub_ = it.subscribe("image_rect_color", 1, imageCallback);
+  image_sub_ = it.subscribe("image_raw", 1, imageCallback);
   image_pub_ = it.advertise("image_rect_color_pupil", 1);
   ros::spin();
   return 0;
