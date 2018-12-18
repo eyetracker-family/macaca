@@ -75,9 +75,6 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg) {
 			  pupiltracker::cvx::cross(image_, cv::Point2f(pupil.center.x,pupil.center.y), 5, pupiltracker::cvx::rgb(255, 255, 0));
 			  cv::ellipse(image_, pupil, pupiltracker::cvx::rgb(255,0,255));
 
-			  cv::imshow("pupil",image_);
-			  cv::waitKey(1);
-
 			  pupil_ellipse_msg.header = msg->header;
 			  pupil_ellipse_msg.x = pupil.center.x * size_times;
 			  pupil_ellipse_msg.y = pupil.center.y * size_times;

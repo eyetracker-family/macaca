@@ -13,10 +13,13 @@ int main(int argc, char **argv)
 	image_transport::Publisher left_pub= it.advertise("scene/left/image", 1);//for rviz UI
 	image_transport::Publisher right_pub= it.advertise("scene/right/image", 1);
 
-	image_transport::Publisher left_pub_remap= it.advertise("scene/left/image_remap", 1);//for yolo dectection
+	//image_transport::Publisher left_pub_remap= it.advertise("scene/left/image_remap", 1);//for yolo dectection
+
+	image_transport::Publisher disparity_pub= it.advertise("scene/disparity", 1);//disparity image for rviz UI
+	image_transport::Publisher tracking_pub= it.advertise("scene/left/trackingandregression", 1);//tracking image for rviz UI
 
 	ros::Publisher pos_pub=nh.advertise<geometry_msgs::PointStamped>("scene/left/point",1000);
-	ros::Subscriber sub=nh.subscribe("/scene/left/fit_point",1000,ImagePoint_callback);//fit point from gaussian regression
+	ros::Subscriber sub=nh.subscribe("/scene/left/fit_point",1000,ImagePoint_callback);//fitted point from gaussian regression
 
 	ros::Subscriber yolo_sub=nh.subscribe("/darknet_ros/bounding_boxes",1000,BoundingBox_callback);
 
@@ -56,8 +59,8 @@ int main(int argc, char **argv)
 		remap(img1_raw, img1_remap, map11, map12, INTER_LINEAR);
 		remap(img2_raw, img2_remap, map21, map22, INTER_LINEAR);
 
-		sensor_msgs::ImagePtr left_pub_msg = cv_bridge::CvImage(std_msgs::Header(),"bgr8", img1_remap).toImageMsg();
-		left_pub_remap.publish(left_pub_msg);
+		//sensor_msgs::ImagePtr left_pub_msg = cv_bridge::CvImage(std_msgs::Header(),"bgr8", img1_remap).toImageMsg();
+		//left_pub_remap.publish(left_pub_msg);
 
 	    cv:: cvtColor(img1_remap,img1_remap_dst,cv::COLOR_BGR2GRAY);
 	    cv:: cvtColor(img2_remap,img2_remap_dst,cv::COLOR_BGR2GRAY);
@@ -75,9 +78,7 @@ int main(int argc, char **argv)
 
 		//copyMakeBorder(img1_remap_dst, img1_remap_dst, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);//left border
 		//copyMakeBorder(img2_remap_dst, img2_remap_dst, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
-        //imshow("img1_remap_dst",img1_remap_dst);
-        //imshow("img2_remap_dst", img2_remap_dst);
-        //cout<<img1_remap_dst.cols<<endl;
+
 		int64 t=getTickCount();
 		bm->compute(img1_remap_dst, img2_remap_dst, disp);//comment it for real time
         //imshow("disp",disp);
@@ -110,7 +111,10 @@ int main(int argc, char **argv)
 		{
 			cv_tracker->update(img1_remap,tracked_box);
 			rectangle(img1_remap,tracked_box,Scalar(255,0,0),2,1);
+			circle(img1_remap,gaze_point_array[29],5,Scalar(0,0,255),3,8,0);
 			imshow("Tracking",img1_remap);
+			sensor_msgs::ImagePtr tracking_msg = cv_bridge::CvImage(std_msgs::Header(),"bgr8", img1_remap).toImageMsg();
+			tracking_pub.publish(tracking_msg);
 		}
 
 		/*if(tracking_box.height!=0)
@@ -131,13 +135,14 @@ int main(int argc, char **argv)
 
 		geometry_msgs::PointStamped pos;
 		long long sumx=0,sumy=0,sumz=0,count=0;
-		if(detected_object_array.size()>0)
+		//if(detected_object_array.size()>0)
+		if(tracked_box.tl().x!=0)
 		{
 			//cout<<"bounding_box: "<<detected_object_array[0].bounding_box<<endl;
 			for(int y=0;y<disp8.rows;y++)
 				for(int x=0;x<disp8.cols;x++)
 				{
-					if(tracked_box.contains(Point2i(x,y))&&xyz.at<Vec3f>(y,x)[2]<1000)
+					if(tracked_box.contains(Point2i(x,y))&&xyz.at<Vec3f>(y,x)[2]<800)
 					{
 						sumx+=xyz.at<Vec3f>(y,x)[0];
 						sumy+=xyz.at<Vec3f>(y,x)[1];
@@ -166,6 +171,9 @@ int main(int argc, char **argv)
 		}
 
 		imshow("disparity", disp8);
+
+		sensor_msgs::ImagePtr disparity_msg = cv_bridge::CvImage(std_msgs::Header(),"mono8", disp8).toImageMsg();
+		disparity_pub.publish(disparity_msg);
 
 		int c = waitKey(1);
 
